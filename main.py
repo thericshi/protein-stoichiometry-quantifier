@@ -4,6 +4,9 @@ from PyQt6.QtWidgets import QApplication, QMainWindow, QFileDialog, QTableWidget
 from PyQt6 import uic
 from PyQt6.QtCore import Qt
 from MixtureModelAlgorithm import EM1, EM2, EM3  # Import from the original script
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
 
 print("Initializing UI")
 
@@ -16,26 +19,39 @@ class MainWindow(QMainWindow):
 
         # Connect the buttons to their respective functions
         self.runButton.clicked.connect(self.run_em_algorithm)
-        self.loadFileButton.clicked.connect(self.load_file)
-
         # Connect Menu items to their functions
         self.actionLoadFile.triggered.connect(self.load_file)
 
+        # self.paramWidget.setStyleSheet("border: 1px solid red")
+
         self.data = None  # Placeholder for the loaded data
         self.data_imported = False
+
+        plt.rc('font', family='Calibri')
+
+        # Create a Matplotlib figure and axes
+        self.fig = Figure()
+        self.ax = self.fig.add_subplot(111)
+
+        self.bars = self.ax.bar(range(3), [0, 0, 0], color='gray', edgecolor='black', width=0.5)        # Set the X-axis labels and Y-axis limits
+        # Set the X-axis labels
+        self.ax.set_xticks(range(3))
+        self.ax.set_xticklabels(['Monomer', 'Dimer', 'Trimer'])
+        self.ax.set_ylim(0, 1)  # Set the y-axis limits to 0-100
+        # Reduce font size
+        self.ax.tick_params(axis='both', labelsize=9)
+
+        # Create a canvas and embed it in the graphWidget
+        self.canvas = FigureCanvasQTAgg(self.fig)
+        self.graphWidget.layout().addWidget(self.canvas)
+
+        # Plot some data
+        # self.ax.plot([1, 2, 3, 4, 5], [10, 20, 30, 40, 50])
 
     def resource_path(self, relative_path):
         """ Get the absolute path to the resource, works in development and after PyInstaller packaging """
         base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
         return os.path.join(base_path, relative_path)
-
-    def add_result_entry(self, parameter, value):
-        # Create two items for each row
-        item1 = QStandardItem(parameter)
-        item2 = QStandardItem(value)
-
-        # Add the items to the model as a new row
-        self.model.appendRow([item1, item2])
 
     def load_file(self):
         # Open a file dialog to select the CSV file
@@ -88,6 +104,8 @@ class MainWindow(QMainWindow):
 
         # Display the results in the QTextEdit widget
         self.display_results(em1.lam, em1.pi, em1.AIC, "M")
+        self.plot_result(em1.pi)
+
 
     def run_em2(self, pi=[0,0], lam=0):
         Blinks = self.data
@@ -99,6 +117,8 @@ class MainWindow(QMainWindow):
 
         # Display the results in the QTextEdit widget
         self.display_results(em2.lam, em2.pi, em2.AIC, "M/D")
+        self.plot_result(em2.pi)
+
 
     def run_em3(self, pi=[0,0,0], lam=0):
         Blinks = self.data
@@ -110,6 +130,7 @@ class MainWindow(QMainWindow):
 
         # Display the results in the QTextEdit widget
         self.display_results(em3.lam, em3.pi, em3.AIC, "M/D/T")
+        self.plot_result(em3.pi)
 
     def bunch_dye_simple(self, x, pi1, pi2, pi3, size):
         """Generate synthetic data"""
@@ -148,6 +169,28 @@ class MainWindow(QMainWindow):
 
         item = QTableWidgetItem(model)
         self.tableWidget.setItem(row_position, 4, item)
+    
+    def plot_result(self, values):
+        """
+        Plots the given values as a bar graph.
+
+        Args:
+            values (list): A list of three values to plot.
+        """
+        # Clear the existing plot
+        self.ax.clear()
+
+        # Create new bars
+        self.bars = self.ax.bar(range(3), [0, 0, 0], color='gray', edgecolor='black', width=0.5)        # Set the X-axis labels and Y-axis limits
+        self.ax.set_xticks(range(3))
+        self.ax.set_xticklabels(['Monomer', 'Dimer', 'Trimer'])
+        self.ax.set_ylim(0, 1)
+        # Reduce font size
+        self.ax.tick_params(axis='both', labelsize=9)
+
+        for bar, value in zip(self.bars, values):
+            bar.set_height(value)
+        self.canvas.draw()
 
 
 if __name__ == "__main__":
