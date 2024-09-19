@@ -5,6 +5,10 @@ Created on Fri Jul 30 08:31:35 2021
 @author: Tiya
 """
 
+import matplotlib.pyplot as plt
+
+
+
 import numpy as np
 from scipy.stats import rv_discrete
 from scipy.special import binom
@@ -84,7 +88,7 @@ class EM3:
         k = 3
         self.AIC = 2 * k - self.LogL
 
-        print(self.iterations)
+        print(self.iterations, self.lam)
 
         # Use the status callback to update the status
         if self.status_callback:
@@ -119,7 +123,7 @@ class EM3:
         print('best lam = ',self.lam)
         print('best pi = ',self.pi)
     
-    def run(self, conv_lv=10e-4):
+    def run(self, conv_lv=10e-5):
         """
         Run the EM algorithm until convergence
         """
@@ -209,7 +213,7 @@ class EM2:
         self.pi = [pi1_initial[best],pi2_initial[best]]
         self.lam = lam_initial[best]       
     
-    def run(self,conv_lv=10e-4):
+    def run(self,conv_lv=10e-5):
         while not abs(self.lam - self.pre_lam) <conv_lv:
             self.EMstep() 
 
@@ -301,7 +305,7 @@ class EM1:
         self.pi = [pi1_initial[best]]
         self.lam = lam_initial[best] 
     
-    def run(self, conv_lv=10e-4):
+    def run(self, conv_lv=10e-5):
         """
         Run the EM algorithm until convergence
         """

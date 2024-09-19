@@ -21,6 +21,7 @@ class MainWindow(QMainWindow):
         self.runButton.clicked.connect(self.run_em_algorithm)
         # Connect Menu items to their functions
         self.actionLoadFile.triggered.connect(self.load_file)
+        self.actionGraph_Dataset.triggered.connect(self.plot_dataset)
 
         # self.paramWidget.setStyleSheet("border: 1px solid red")
 
@@ -192,6 +193,21 @@ class MainWindow(QMainWindow):
             bar.set_height(value)
         self.canvas.draw()
 
+    def plot_dataset(self):
+        
+        if not self.data_imported:
+            self.resultDisplay.setText("Please import the data file before plotting")
+            return
+
+        self.ax.clear()
+
+        # Plot the data
+        self.ax.plot(sorted(self.data))
+        # Add labels and a title
+        self.ax.set_xlabel("Dye (Sorted)")
+        self.ax.set_ylabel("Number of Blinks")
+
+        self.canvas.draw()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

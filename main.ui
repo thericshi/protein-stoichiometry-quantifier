@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>679</width>
-    <height>624</height>
+    <width>622</width>
+    <height>462</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -50,14 +50,20 @@
    <property name="layoutDirection">
     <enum>Qt::LeftToRight</enum>
    </property>
+   <property name="styleSheet">
+    <string notr="true">background-color: rgb(153, 153, 153);</string>
+   </property>
    <layout class="QGridLayout" name="gridLayout">
     <property name="leftMargin">
-     <number>18</number>
+     <number>0</number>
     </property>
     <property name="rightMargin">
-     <number>18</number>
+     <number>0</number>
     </property>
-    <item row="3" column="0" colspan="2">
+    <property name="verticalSpacing">
+     <number>0</number>
+    </property>
+    <item row="4" column="0" colspan="2">
      <widget class="QTableWidget" name="tableWidget">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -65,14 +71,17 @@
         <verstretch>0</verstretch>
        </sizepolicy>
       </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(255, 255, 255);</string>
+      </property>
       <property name="rowCount">
        <number>0</number>
       </property>
-      <attribute name="horizontalHeaderMinimumSectionSize">
-       <number>32</number>
-      </attribute>
       <attribute name="horizontalHeaderDefaultSectionSize">
        <number>90</number>
+      </attribute>
+      <attribute name="horizontalHeaderMinimumSectionSize">
+       <number>32</number>
       </attribute>
       <attribute name="horizontalHeaderStretchLastSection">
        <bool>true</bool>
@@ -104,7 +113,7 @@
       </column>
      </widget>
     </item>
-    <item row="2" column="0" colspan="2">
+    <item row="3" column="0" colspan="2">
      <widget class="QTextEdit" name="resultDisplay">
       <property name="enabled">
        <bool>true</bool>
@@ -115,10 +124,19 @@
         <verstretch>20</verstretch>
        </sizepolicy>
       </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(255, 255, 255);</string>
+      </property>
      </widget>
     </item>
-    <item row="1" column="0">
+    <item row="2" column="0" colspan="2">
      <widget class="QLabel" name="labelResult">
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(216, 216, 216);</string>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
       <property name="text">
        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Results&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
@@ -172,7 +190,7 @@
          </property>
          <property name="sizeHint" stdset="0">
           <size>
-           <width>80</width>
+           <width>30</width>
            <height>40</height>
           </size>
          </property>
@@ -181,8 +199,8 @@
        <item>
         <widget class="QWidget" name="paramWidget" native="true">
          <property name="styleSheet">
-          <string notr="true">background-color: rgb(255, 255, 255);
-border-color: rgb(106, 106, 106);</string>
+          <string notr="true">border-color: rgb(106, 106, 106);
+background-color: rgb(240, 240, 240);</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_4">
           <property name="leftMargin">
@@ -218,7 +236,7 @@ border-color: rgb(106, 106, 106);</string>
              <enum>QFrame::Plain</enum>
             </property>
             <property name="text">
-             <string>Property Editor</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Configuration Editor&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="margin">
              <number>1</number>
@@ -247,6 +265,12 @@ border-color: rgb(106, 106, 106);</string>
             </property>
             <item>
              <widget class="QLabel" name="label_3">
+              <property name="maximumSize">
+               <size>
+                <width>200</width>
+                <height>16777215</height>
+               </size>
+              </property>
               <property name="styleSheet">
                <string notr="true"/>
               </property>
@@ -259,7 +283,7 @@ border-color: rgb(106, 106, 106);</string>
              <widget class="QLabel" name="filePathLabel">
               <property name="maximumSize">
                <size>
-                <width>250</width>
+                <width>230</width>
                 <height>16777215</height>
                </size>
               </property>
@@ -278,7 +302,7 @@ border-color: rgb(106, 106, 106);</string>
               </property>
               <property name="sizeHint" stdset="0">
                <size>
-                <width>250</width>
+                <width>230</width>
                 <height>20</height>
                </size>
               </property>
@@ -288,7 +312,7 @@ border-color: rgb(106, 106, 106);</string>
              <widget class="QLabel" name="label_2">
               <property name="maximumSize">
                <size>
-                <width>250</width>
+                <width>230</width>
                 <height>16777215</height>
                </size>
               </property>
@@ -301,9 +325,12 @@ border-color: rgb(106, 106, 106);</string>
              <widget class="QGroupBox" name="groupBox">
               <property name="maximumSize">
                <size>
-                <width>250</width>
+                <width>230</width>
                 <height>16777215</height>
                </size>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">background-color: rgb(255, 255, 255);</string>
               </property>
               <property name="title">
                <string>Select Protein Complex Types to Include</string>
@@ -343,7 +370,7 @@ border-color: rgb(106, 106, 106);</string>
               </property>
               <property name="sizeHint" stdset="0">
                <size>
-                <width>250</width>
+                <width>230</width>
                 <height>20</height>
                </size>
               </property>
@@ -382,6 +409,9 @@ border-color: rgb(106, 106, 106);</string>
                   <height>16777215</height>
                  </size>
                 </property>
+                <property name="styleSheet">
+                 <string notr="true">background-color: rgb(255, 255, 255);</string>
+                </property>
                </widget>
               </item>
               <item row="0" column="1">
@@ -391,6 +421,9 @@ border-color: rgb(106, 106, 106);</string>
                   <width>100</width>
                   <height>16777215</height>
                  </size>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">background-color: rgb(255, 255, 255);</string>
                 </property>
                </widget>
               </item>
@@ -407,7 +440,7 @@ border-color: rgb(106, 106, 106);</string>
              <widget class="QPushButton" name="runButton">
               <property name="maximumSize">
                <size>
-                <width>250</width>
+                <width>230</width>
                 <height>16777215</height>
                </size>
               </property>
@@ -424,6 +457,19 @@ border-color: rgb(106, 106, 106);</string>
       </layout>
      </widget>
     </item>
+    <item row="1" column="0">
+     <spacer name="horizontalSpacer_3">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>40</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menuBar">
@@ -431,8 +477,8 @@ border-color: rgb(106, 106, 106);</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>679</width>
-     <height>22</height>
+     <width>622</width>
+     <height>18</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -441,11 +487,23 @@ border-color: rgb(106, 106, 106);</string>
     </property>
     <addaction name="actionLoadFile"/>
    </widget>
+   <widget class="QMenu" name="menuGraph">
+    <property name="title">
+     <string>Graph</string>
+    </property>
+    <addaction name="actionGraph_Dataset"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuGraph"/>
   </widget>
   <action name="actionLoadFile">
    <property name="text">
     <string>Load Data File</string>
+   </property>
+  </action>
+  <action name="actionGraph_Dataset">
+   <property name="text">
+    <string>Graph Dataset</string>
    </property>
   </action>
  </widget>
