@@ -1,6 +1,6 @@
 import sys, os
 import numpy as np
-from PyQt6.QtWidgets import QApplication, QMainWindow, QFileDialog, QTableWidgetItem
+from PyQt6.QtWidgets import QApplication, QMainWindow, QFileDialog, QTableWidgetItem, QMessageBox
 from PyQt6 import uic
 from PyQt6.QtCore import Qt
 from MixtureModelAlgorithm import EM1, EM2, EM3  # Import from the original script
@@ -22,11 +22,19 @@ class MainWindow(QMainWindow):
         # Connect Menu items to their functions
         self.actionLoadFile.triggered.connect(self.load_file)
         self.actionGraph_Dataset.triggered.connect(self.plot_dataset)
+        self.radioEM1.clicked.connect(self.set_default_pi)
+        self.radioEM2.clicked.connect(self.set_default_pi)
+        self.radioEM3.clicked.connect(self.set_default_pi)
+
+
+        self.inputLambda.setText("0")
+        self.inputTheta.setText("1")
 
         # self.paramWidget.setStyleSheet("border: 1px solid red")
 
         self.data = None  # Placeholder for the loaded data
         self.data_imported = False
+        self.lab_ineff = False
 
         plt.rc('font', family='Calibri')
 
@@ -39,6 +47,7 @@ class MainWindow(QMainWindow):
         self.ax.set_xticks(range(3))
         self.ax.set_xticklabels(['Monomer', 'Dimer', 'Trimer'])
         self.ax.set_ylim(0, 1)  # Set the y-axis limits to 0-100
+        self.ax.set_ylabel("Distribution")
         # Reduce font size
         self.ax.tick_params(axis='both', labelsize=9)
 
@@ -71,29 +80,44 @@ class MainWindow(QMainWindow):
         else:
             self.filePathLabel.setText("No file loaded")
 
+    def set_default_pi(self):
+        if self.radioEM1.isChecked():
+            self.inputPi.setText("0")
+        elif self.radioEM2.isChecked():
+            self.inputPi.setText("0,0")
+        else:
+            self.inputPi.setText("0,0,0")
+
     def run_em_algorithm(self):
         # Ensure data is loaded
         if self.data is None:
-            self.resultDisplay.setText("Please load a data file before running the algorithm.")
+            # self.resultDisplay.setText("Please load a data file before running the algorithm")
+            self.show_popup("Missing data", "Please load a data file before running the algorithm")
             return
 
         # Get user input for pi and lambda
         pi_input = self.inputPi.text()
         lambda_input = self.inputLambda.text()
+        theta_input = self.inputTheta.text()
         
         # Process the input (convert string to list and float)
         pi = [float(x) for x in pi_input.split(',')] if pi_input else None
         lam = float(lambda_input) if lambda_input else None
+        theta = float(theta_input) if theta_input else None
+
+        self.lab_ineff = True if theta else False
         
         # Select EM2 or EM3 based on user selection
         if self.radioEM1.isChecked():
             self.run_em1(pi, lam)
         elif self.radioEM2.isChecked():
-            self.run_em2(pi, lam)
+            self.run_em2(pi, lam, theta)
         elif self.radioEM3.isChecked():
-            self.run_em3(pi, lam)
+            self.run_em3(pi, lam, theta)
         else:
-            self.resultDisplay.setText("Please select EM2 or EM3.")
+            # self.resultDisplay.setText("Please select an algorithm")
+            self.show_popup("Missing algorithm", "Please select an algorithm")
+
 
     def run_em1(self, pi=[0], lam=0):
         Blinks = self.data
@@ -108,7 +132,7 @@ class MainWindow(QMainWindow):
         self.plot_result(em1.pi)
 
 
-    def run_em2(self, pi=[0,0], lam=0):
+    def run_em2(self, pi=[0,0], lam=0, theta=1):
         Blinks = self.data
 
         # Initialize and run EM2
@@ -116,18 +140,26 @@ class MainWindow(QMainWindow):
         em2.initialize()
         em2.run()
 
+        if self.lab_ineff:
+            em2.theta = theta
+            em2.apply_lab_ineff()
+
         # Display the results in the QTextEdit widget
         self.display_results(em2.lam, em2.pi, em2.AIC, "M/D")
         self.plot_result(em2.pi)
 
 
-    def run_em3(self, pi=[0,0,0], lam=0):
+    def run_em3(self, pi=[0,0,0], lam=0, theta=1):
         Blinks = self.data
 
         # Initialize and run EM3
         em3 = EM3(Blinks, pi=pi, lam=lam)
         em3.initialize()
         em3.run()
+
+        if self.lab_ineff:
+            em3.theta = theta
+            em3.apply_lab_ineff()
 
         # Display the results in the QTextEdit widget
         self.display_results(em3.lam, em3.pi, em3.AIC, "M/D/T")
@@ -143,7 +175,7 @@ class MainWindow(QMainWindow):
     def display_results(self, lam, pi, AIC, model):
         # Display the results in the QTextEdit widget
         result_text = f"Estimated lambda: {lam}\nEstimated pi: {pi}\nAIC: {AIC}"
-        self.resultDisplay.setText(result_text)
+        # self.resultDisplay.setText(result_text)
         row_position = 0
         self.tableWidget.insertRow(row_position)
 
@@ -168,9 +200,12 @@ class MainWindow(QMainWindow):
         item = QTableWidgetItem(str(round(lam, 2)))
         self.tableWidget.setItem(row_position, 3, item)
 
-        item = QTableWidgetItem(model)
+        item = QTableWidgetItem(str(round(AIC, 2)))
         self.tableWidget.setItem(row_position, 4, item)
-    
+
+        item = QTableWidgetItem(model)
+        self.tableWidget.setItem(row_position, 5, item)
+
     def plot_result(self, values):
         """
         Plots the given values as a bar graph.
@@ -186,6 +221,7 @@ class MainWindow(QMainWindow):
         self.ax.set_xticks(range(3))
         self.ax.set_xticklabels(['Monomer', 'Dimer', 'Trimer'])
         self.ax.set_ylim(0, 1)
+        self.ax.set_ylabel("Distribution")
         # Reduce font size
         self.ax.tick_params(axis='both', labelsize=9)
 
@@ -193,10 +229,15 @@ class MainWindow(QMainWindow):
             bar.set_height(value)
         self.canvas.draw()
 
+    def show_popup(self, title, message):
+        QMessageBox.information(self, title, message)
+
     def plot_dataset(self):
         
         if not self.data_imported:
-            self.resultDisplay.setText("Please import the data file before plotting")
+            # self.resultDisplay.setText("Please import the data file before plotting")
+            self.show_popup("Missing data", "Please import the data file before plotting")
+
             return
 
         self.ax.clear()

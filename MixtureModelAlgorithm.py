@@ -7,14 +7,18 @@ Created on Fri Jul 30 08:31:35 2021
 
 import matplotlib.pyplot as plt
 
-
-
 import numpy as np
 from scipy.stats import rv_discrete
 from scipy.special import binom
 import random
 random.seed=1
 '''Negative binomial distribution'''
+
+def q(N, h, theta):
+    '''
+    Computes q(N|h), the pmf for labelling ineffciency
+    '''
+    return binom(h, N) * (theta**N) * (1-theta)**(h-N)
 
 class Nbinorm_gen(rv_discrete):
     def _pmf(self,B, lamda,N):
@@ -45,6 +49,8 @@ class EM3:
         self.pre_lam = 0
         self.LogL = 0
         self.status_callback = status_callback  # Status callback
+
+        self.theta = 1
 
     def EMstep(self):
         """
@@ -123,7 +129,7 @@ class EM3:
         print('best lam = ',self.lam)
         print('best pi = ',self.pi)
     
-    def run(self, conv_lv=10e-5):
+    def run(self, conv_lv=10e-4):
         """
         Run the EM algorithm until convergence
         """
@@ -131,6 +137,21 @@ class EM3:
             self.EMstep()
             if self.status_callback:
                 self.status_callback(f"Lambda difference = {abs(self.lam - self.pre_lam):.6f}") 
+
+    def gamma(self):
+        product = self.pi[2] * ((q(1, 1, self.theta) * (q(2, 2, self.theta) - q(2, 3, self.theta))) 
+                                + q(1, 2, self.theta) * q(2, 3, self.theta) - q(1, 3, self.theta) * q(2, 2, self.theta))
+        return product + q(3, 3, self.theta) * (self.pi[1] * (q(1, 1, self.theta) - q(1, 2, self.theta)) + self.pi[0] * q(2, 2, self.theta))
+
+    def apply_lab_ineff(self):
+        g = self.gamma()
+        conv_pi = [0, 0, 0]
+        conv_pi[2] = (self.pi[2] * q(1, 1, self.theta) * q(2, 2, self.theta)) / g
+        conv_pi[1] = (q(1, 1, self.theta) * (self.pi[1] * q(3, 3, self.theta) - self.pi[2] * q(2, 3, self.theta))) / g
+        conv_pi[0] = 1 - conv_pi[1] - conv_pi[2]
+
+        self.pi = conv_pi
+
 class EM2:
 
     def __init__(self,X, pi=None, lam=None):
@@ -149,6 +170,9 @@ class EM2:
         self.AIC = 0
         self.pre_lam = 0
         self.LogL = 0
+
+        self.theta = 1
+
          
     def EMstep(self):
         """
@@ -213,9 +237,14 @@ class EM2:
         self.pi = [pi1_initial[best],pi2_initial[best]]
         self.lam = lam_initial[best]       
     
-    def run(self,conv_lv=10e-5):
+    def run(self,conv_lv=10e-4):
         while not abs(self.lam - self.pre_lam) <conv_lv:
             self.EMstep() 
+    
+    def apply_lab_ineff(self):
+        print(q(1, 1, self.theta), q(1, 2, self.theta), q(2, 2, self.theta))
+        self.pi[1] = (q(1, 1, self.theta)) / (q(1, 1, self.theta) - q(1, 2, self.theta) + (self.pi[0]/self.pi[1]) * (q(2, 2, self.theta)))
+        self.pi[0] = 1 - self.pi[1]
 
 
 class EM1:
