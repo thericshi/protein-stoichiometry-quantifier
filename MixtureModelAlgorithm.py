@@ -136,7 +136,7 @@ class EM3:
         while not abs(self.lam - self.pre_lam) < conv_lv:
             self.EMstep()
             if self.status_callback:
-                self.status_callback(f"Lambda difference = {abs(self.lam - self.pre_lam):.6f}") 
+                self.status_callback(f"Lambda difference = {abs(self.lam - self.pre_lam):.6f}")
 
     def gamma(self):
         product = self.pi[2] * ((q(1, 1, self.theta) * (q(2, 2, self.theta) - q(2, 3, self.theta))) 
