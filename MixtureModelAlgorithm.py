@@ -20,6 +20,22 @@ def q(N, h, theta):
     '''
     return binom(h, N) * (theta**N) * (1-theta)**(h-N)
 
+def fp(B, lamda, N):
+    """
+    Computes the probability mass function (PMF) of the negative binomial distribution for a vector of values.
+
+    Args:
+        B: A NumPy array of the number of failures.
+        lamda: The mean number of successes.
+        N: The number of successes.
+
+    Returns:
+        A NumPy array of the PMF values corresponding to each element in B.
+    """
+
+    lamda = lamda + 0 * np.random.randn()  # Ensure lamda is a scalar
+    return (np.exp(1/lamda)-1)**N * np.exp(-B/lamda) * binom(B-1, N-1)
+
 class Nbinorm_gen(rv_discrete):
     def _pmf(self,B, lamda,N):
        lamda = lamda + 0*np.random.randn()
@@ -30,8 +46,7 @@ NB = Nbinorm_gen(name='NB',a=1)
 '''EM-algorithm for 3 clusters'''
 
 class EM3:
-
-    def __init__(self, X, pi=None, lam=None, status_callback=None):
+    def __init__(self, X, pi=None, lam=None):
         if pi is None:
             self.pi = [0, 0, 0]
         else:
@@ -48,67 +63,72 @@ class EM3:
         self.AIC = 0
         self.pre_lam = 0
         self.LogL = 0
-        self.status_callback = status_callback  # Status callback
+        self.theta = 0.75
 
-        self.theta = 1
+        # Caching precomputations
+        self.X_minus_N = [X - self.N[c] for c in range(3)]  # X - N[c] values
 
     def EMstep(self):
         """
-        E-Step: Calculate the expectation (responsibility)
+        E-Step: Calculate the expectation (responsibility) using vectorization.
+        M-Step: Update parameters and perform model selection.
         """
-        # Update lambda and increment iterations
+        # Update lambda from previous iteration
         self.pre_lam = self.lam
         self.iterations += 1
-
-        # Create responsibility array r
-        r = np.zeros((len(self.X), 3))
-
-        # Probability calculation for each data point belonging to a cluster
-        for co, p in zip(range(3), self.pi):
-            r[:, co] = p * NB.pmf(self.X, lamda=self.lam, N=self.N[co])
-
-        # Normalize the probabilities
-        for i in range(len(r)):
-            r[i] = r[i] / (np.sum(self.pi) * np.sum(r, axis=1)[i])
-
-        """ M-Step: Recalculate parameters """
-        # Calculate pi
-        m_c = []
-        for c in range(len(r[0])):
-            m = np.sum(r[:, c])
-            m_c.append(m)
-
-        for k in range(len(m_c)):
-            self.pi[k] = (m_c[k] / np.sum(m_c))
-
-        # Calculate lambda
-        X = self.X
-        self.lam = 1 / np.log((np.dot(r[:, 0], X) + np.dot(r[:, 1], X) + np.dot(r[:, 2], X)) / (
-                np.dot(r[:, 0], X - self.N[0]) + np.dot(r[:, 1], X - self.N[1]) + np.dot(r[:, 2], X - self.N[2])))
-
-        """ Log-likelihood and AIC calculation """
-        self.LogL = np.sum(
-            np.log(NB.pmf(self.X, lamda=self.lam, N=self.N[0]) * self.pi[0] +
-                   NB.pmf(self.X, lamda=self.lam, N=self.N[1]) * self.pi[1] +
-                   NB.pmf(self.X, lamda=self.lam, N=self.N[2]) * self.pi[2]))
-        k = 3
-        self.AIC = 2 * k - self.LogL
-
-        print(self.iterations, self.lam)
-
-        # Use the status callback to update the status
-        if self.status_callback:
-            self.status_callback(f"Iteration {self.iterations}: Lambda = {self.lam:.4f}, AIC = {self.AIC:.4f}")
         
+        # Precompute fp values for each cluster and data point
+        fp_vals = np.array([fp(self.X, lamda=self.lam, N=self.N[c]) for c in range(3)])
+        
+        # E-Step: Calculate responsibility (r) matrix using broadcasting
+        r = np.array(self.pi)[:, np.newaxis] * fp_vals  # Convert self.pi to np.array and broadcast
+        
+        # Normalize responsibilities across clusters
+        r /= np.sum(r, axis=0, keepdims=True)  # Broadcasting to divide by the sum for each sample
+        
+        # Transpose r to make it (n_samples, 3) for further calculations
+        r = r.T
+        
+        # M-Step: Update pi using vectorized operations
+        m_c = np.sum(r, axis=0)  # Shape: (3,)
+        self.pi = m_c / np.sum(m_c)
+        
+        # Calculate lambda using optimized dot products
+
+        self.lam = 1 / np.log((np.dot(r[:, 0], self.X) + np.dot(r[:, 1], self.X) + np.dot(r[:, 2], self.X)) / (
+            np.dot(r[:, 0], self.X_minus_N[0]) +
+            np.dot(r[:, 1], self.X_minus_N[1]) +
+            np.dot(r[:, 2], self.X_minus_N[2])
+        ))
+        """
+        # Accelerate convergence by halving the difference between new_lam and pre_la
+        
+        lam_diff = self.lam - self.pre_lam
+        if lam_diff < 0.1 and lam_diff > 10e-7:
+            self.lam = self.lam + 1 * lam_diff  # Apply damping factor of 0.5 to adjust the update
+        """
+
+        
+        # Log-likelihood using vectorized operation
+        self.LogL = np.sum(np.log((
+            fp_vals[0] * self.pi[0] + 
+            fp_vals[1] * self.pi[1] + 
+            fp_vals[2] * self.pi[2]
+        )))
+        
+        # Calculate AIC (k = 3, number of parameters)
+        self.AIC = 2 * 3 - self.LogL
+
     def initialize(self, lam_min=1, lam_max=6):
-        pi_start = [[0.33,0.33,0.33],[0.33,0.33,0.33],[0.2,0.6,0.2],[0.6,0.2,0.2],[0.05,0.85,0.10],[0.85,0.10,0.05]]
+        pi_start = [[0.75, 0.20, 0.05],[0.60, 0.25, 0.15],[0.50, 0.35, 0.15],[0.85,0.10,0.05]]
         lam_initial = np.zeros(len(pi_start))
         pi1_initial = np.zeros(len(pi_start))
         pi2_initial = np.zeros(len(pi_start))
         pi3_initial = np.zeros(len(pi_start))   
-        LogL_initial = np.zeros(len(pi_start))   
+        LogL_initial = np.zeros(len(pi_start))  
+        self.lam = lam_min+(random.random() * (lam_max - lam_min))
+ 
         for j in range(len(pi_start)):
-            self.lam = lam_min+(random.random() * (lam_max - lam_min))
             self.pi = pi_start[j]
             while self.iterations<30:
                 self.EMstep() 
@@ -118,25 +138,40 @@ class EM3:
             pi2_initial[j] = self.pi[1]
             pi3_initial[j] = self.pi[2]
             LogL_initial[j] = self.LogL
-        print(LogL_initial)
-        print(lam_initial)
-        print(pi1_initial)
-        print(pi2_initial)
-        print(pi3_initial)
         best = np.nanargmin(-LogL_initial)
         self.pi = [pi1_initial[best],pi2_initial[best],pi3_initial[best]]
         self.lam = lam_initial[best]  
-        print('best lam = ',self.lam)
-        print('best pi = ',self.pi)
+        # print('best lam = ',self.lam)
+        # print('best pi = ',self.pi)
+
+    def initialize_old(self, lam_min=1, lam_max=6):
+        pi_start = [[0.33,0.33,0.33],[0.2,0.6,0.2],[0.6,0.2,0.2],[0.05,0.85,0.10],[0.85,0.10,0.05]]
+        lam_initial = np.zeros(len(pi_start))
+        pi1_initial = np.zeros(len(pi_start))
+        pi2_initial = np.zeros(len(pi_start))
+        pi3_initial = np.zeros(len(pi_start))   
+        LogL_initial = np.zeros(len(pi_start))  
+        self.lam = lam_min+(random.random() * (lam_max - lam_min))
+ 
+        for j in range(len(pi_start)):
+            self.pi = pi_start[j]
+            while self.iterations<30:
+                self.EMstep() 
+            self.iterations = 0
+            lam_initial[j] = self.lam
+            pi1_initial[j] = self.pi[0]
+            pi2_initial[j] = self.pi[1]
+            pi3_initial[j] = self.pi[2]
+            LogL_initial[j] = self.LogL
+        best = np.nanargmin(-LogL_initial)
+        self.pi = [pi1_initial[best],pi2_initial[best],pi3_initial[best]]
+        self.lam = lam_initial[best]  
+        # print('best lam = ',self.lam)
+        # print('best pi = ',self.pi)
     
-    def run(self, conv_lv=10e-4):
-        """
-        Run the EM algorithm until convergence
-        """
-        while not abs(self.lam - self.pre_lam) < conv_lv:
-            self.EMstep()
-            if self.status_callback:
-                self.status_callback(f"Lambda difference = {abs(self.lam - self.pre_lam):.6f}")
+    def run(self,conv_lv=10e-5):
+        while not abs(self.lam - self.pre_lam) <conv_lv:
+            self.EMstep() 
 
     def gamma(self):
         product = self.pi[2] * ((q(1, 1, self.theta) * (q(2, 2, self.theta) - q(2, 3, self.theta))) 
@@ -153,102 +188,101 @@ class EM3:
         self.pi = conv_pi
 
 class EM2:
-
-    def __init__(self,X, pi=None, lam=None):
-        if pi ==None:
-            self.pi = [0,0]
+    def __init__(self, X, pi=None, lam=None):
+        if pi is None:
+            self.pi = [0, 0]
         else:
             self.pi = pi
         
-        if lam ==None:
+        if lam is None:
             self.lam = 0
         else:
             self.lam = lam
+
         self.iterations = 0
         self.X = X
-        self.N = [1,2]
+        self.N = [1, 2]
         self.AIC = 0
         self.pre_lam = 0
         self.LogL = 0
+        self.theta = 0.75
 
-        self.theta = 1
+        # Caching precomputations
+        self.X_minus_N = [X - self.N[c] for c in range(2)]  # X - N[c] values
 
-         
     def EMstep(self):
         """
-        E-Step Calculate the expectation (responsibility)
+        E-Step: Calculate the expectation (responsibility) using vectorization.
+        M-Step: Update parameters and perform model selection.
         """
-        #Update parameter
+        # Update lambda from previous iteration
         self.pre_lam = self.lam
-        self.iterations +=1
-            
-        #Create an array for responsibility r
-        r = np.zeros((len(self.X),2))
-        
-        #Calculate the probability for each datapoint x_i to belong to each cluster     
-        for co,p in zip(range(2),self.pi):
-            r[:,co] = p*NB.pmf(self.X,lamda=self.lam,N=self.N[co])  
-           
-        #Normalize the proability
-        for i in range(len(r)):
-            r[i] = r[i]/(np.sum(self.pi)*np.sum(r,axis=1)[i])
-            
-        """M-Step"""
-        """calculate lamda_max """
-        # Calculate pi
-        m_c = []
-        for c in range(len(r[0])):
-            m = np.sum(r[:,c])
-            m_c.append(m)  
-            
-        for k in range(len(m_c)):
-            self.pi[k] = (m_c[k]/np.sum(m_c)) 
-            
-        #Calculate lambda
-        X = self.X            
-        self.lam = 1/np.log((np.dot(r[:,0],X)+np.dot(r[:,1],X))/(np.dot(r[:,0],X-self.N[0])+np.dot(r[:,1],X-self.N[1])))             
-         
-        """Model selection"""
-        """Calculate AIC/Log-likelihood"""    
-        self.LogL = np.sum(np.log(NB.pmf(self.X,lamda=self.lam,N=self.N[0])*self.pi[0]+ NB.pmf(self.X,lamda=self.lam,N=self.N[1])*self.pi[1]))    
-        k = 2
-        self.AIC = 2*k-self.LogL
+        self.iterations += 1
 
-        print(self.iterations)
+        # Precompute fp values for each cluster and data point
+        fp_vals = np.array([fp(self.X, lamda=self.lam, N=self.N[c]) for c in range(2)])
+
+        # E-Step: Calculate responsibility (r) matrix using broadcasting
+        r = np.array(self.pi)[:, np.newaxis] * fp_vals  # Convert self.pi to np.array and broadcast
         
-    def initialize(self, lam_min=2, lam_max=6):
-        pi_start = [[0.5,0.5],[0.5,0.5],[0.2,0.8],[0.8,0.2,0.2],[0.05,0.95],[0.95,0.05]] # [0.8,0.2,0.2]??
+        # Normalize responsibilities across clusters
+        r /= np.sum(r, axis=0, keepdims=True)  # Broadcasting to divide by the sum for each sample
+
+        # Transpose r to make it (n_samples, 2) for further calculations
+        r = r.T
+
+        # M-Step: Update pi using vectorized operations
+        m_c = np.sum(r, axis=0)  # Shape: (2,)
+        self.pi = m_c / np.sum(m_c)
+
+        # Calculate lambda using optimized dot products
+        self.lam = 1 / np.log((np.dot(r[:, 0], self.X) + np.dot(r[:, 1], self.X)) / (
+            np.dot(r[:, 0], self.X_minus_N[0]) +
+            np.dot(r[:, 1], self.X_minus_N[1])
+        ))
+
+        # Log-likelihood using vectorized operation
+        self.LogL = np.sum(np.log((
+            fp_vals[0] * self.pi[0] + 
+            fp_vals[1] * self.pi[1]
+        )))
+
+        # Calculate AIC (k = 2, number of parameters)
+        self.AIC = 2 * 2 - self.LogL
+
+    def initialize(self, lam_min=1, lam_max=6):
+        pi_start = [[0.75, 0.25], [0.60, 0.40], [0.50, 0.50], [0.85, 0.15]]
         lam_initial = np.zeros(len(pi_start))
         pi1_initial = np.zeros(len(pi_start))
-        pi2_initial = np.zeros(len(pi_start)) 
-        LogL_initial = np.zeros(len(pi_start))   
+        pi2_initial = np.zeros(len(pi_start))
+        LogL_initial = np.zeros(len(pi_start))
+        self.lam = lam_min + (random.random() * (lam_max - lam_min))
+
         for j in range(len(pi_start)):
-            self.lam = lam_min+(random.random() * (lam_max - lam_min))
             self.pi = pi_start[j]
-            for self.iterations in range(35):
-                self.EMstep() 
+            while self.iterations < 30:
+                self.EMstep()
             self.iterations = 0
             lam_initial[j] = self.lam
             pi1_initial[j] = self.pi[0]
             pi2_initial[j] = self.pi[1]
             LogL_initial[j] = self.LogL
-        print("all", pi1_initial)
         best = np.nanargmin(-LogL_initial)
-        self.pi = [pi1_initial[best],pi2_initial[best]]
-        self.lam = lam_initial[best]       
-    
-    def run(self,conv_lv=10e-4):
-        while not abs(self.lam - self.pre_lam) <conv_lv:
-            self.EMstep() 
-    
+        self.pi = [pi1_initial[best], pi2_initial[best]]
+        self.lam = lam_initial[best]
+        # print('best lam = ', self.lam)
+        # print('best pi = ', self.pi)
+
+    def run(self, conv_lv=10e-5):
+        while not abs(self.lam - self.pre_lam) < conv_lv:
+            self.EMstep()
+
     def apply_lab_ineff(self):
-        print(q(1, 1, self.theta), q(1, 2, self.theta), q(2, 2, self.theta))
-        self.pi[1] = (q(1, 1, self.theta)) / (q(1, 1, self.theta) - q(1, 2, self.theta) + (self.pi[0]/self.pi[1]) * (q(2, 2, self.theta)))
+        self.pi[1] = (q(1, 1, self.theta)) / (q(1, 1, self.theta) - q(1, 2, self.theta) + (self.pi[0] / self.pi[1]) * (q(2, 2, self.theta)))
         self.pi[0] = 1 - self.pi[1]
 
 
 class EM1:
-
     def __init__(self, X, pi=None, lam=None, status_callback=None):
         if pi is None:
             self.pi = [0]
@@ -262,11 +296,12 @@ class EM1:
 
         self.iterations = 0
         self.X = X
-        self.N = [1]
+        self.N = [1]  # Only one cluster
         self.AIC = 0
         self.pre_lam = 0
         self.LogL = 0
         self.status_callback = status_callback  # Status callback
+        self.X_minus_N = X - self.N[0]  # Cache precomputed X - N[0]
 
     def EMstep(self):
         """
@@ -276,26 +311,13 @@ class EM1:
         self.pre_lam = self.lam
         self.iterations += 1
 
-        # Create responsibility array r
-        r = np.zeros((len(self.X), 1))
-
-        # Probability calculation for each data point belonging to a cluster
-        for co, p in zip(range(1), self.pi):
-            r[:, co] = p * NB.pmf(self.X, lamda=self.lam, N=self.N[co])
-
-        # Normalize the probabilities
-        for i in range(len(r)):
-            r[i] = r[i] / (np.sum(self.pi) * np.sum(r, axis=1)[i])
+        r = np.ones((len(self.X), 1))
 
         """ M-Step: Recalculate parameters """
         # Calculate pi
-        m_c = []
-        for c in range(len(r[0])):
-            m = np.sum(r[:, c])
-            m_c.append(m)
+        m_c = np.sum(r, axis=0, keepdims=True)
 
-        for k in range(len(m_c)):
-            self.pi[k] = (m_c[k] / np.sum(m_c))
+        self.pi = np.ones((1, 1))
 
         # Calculate lambda
         X = self.X
@@ -303,7 +325,7 @@ class EM1:
 
         """ Log-likelihood and AIC calculation """
         self.LogL = np.sum(
-            np.log(NB.pmf(self.X, lamda=self.lam, N=self.N[0]) * self.pi[0]))
+            np.log(fp(self.X, lamda=self.lam, N=self.N[0]) * self.pi[0]))
         k = 1
         self.AIC = 2 * k - self.LogL
 
@@ -312,28 +334,32 @@ class EM1:
         # Use the status callback to update the status
         if self.status_callback:
             self.status_callback(f"Iteration {self.iterations}: Lambda = {self.lam:.4f}, AIC = {self.AIC:.4f}")
-        
+
     def initialize(self, lam_min=1, lam_max=6):
-        pi_start = [[1]]
+        """
+        Initialization of EM parameters with multiple starting values for pi and lambda
+        """
+        pi_start = [[1]]  # Only one cluster, so pi is always 1
         lam_initial = np.zeros(len(pi_start))
-        pi1_initial = np.zeros(len(pi_start)) 
-        LogL_initial = np.zeros(len(pi_start))   
+        pi1_initial = np.zeros(len(pi_start))
+        LogL_initial = np.zeros(len(pi_start))
+
         for j in range(len(pi_start)):
-            self.lam = lam_min+(random.random() * (lam_max - lam_min))
+            self.lam = lam_min + (random.random() * (lam_max - lam_min))
             self.pi = pi_start[j]
-            while self.iterations<30:
-                self.EMstep() 
+            while self.iterations < 30:
+                self.EMstep()
             self.iterations = 0
             lam_initial[j] = self.lam
             pi1_initial[j] = self.pi[0]
             LogL_initial[j] = self.LogL
-        print(LogL_initial)
-        print(lam_initial)
-        print(pi1_initial)
+
         best = np.nanargmin(-LogL_initial)
         self.pi = [pi1_initial[best]]
-        self.lam = lam_initial[best] 
-    
+        self.lam = lam_initial[best]
+        print('best lam = ', self.lam)
+        print('best pi = ', self.pi)
+
     def run(self, conv_lv=10e-5):
         """
         Run the EM algorithm until convergence
@@ -342,6 +368,7 @@ class EM1:
             self.EMstep()
             if self.status_callback:
                 self.status_callback(f"Lambda difference = {abs(self.lam - self.pre_lam):.6f}")
+
        
 #%%
 '''___________________________Sample code_______________________________________________'''        
