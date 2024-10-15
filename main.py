@@ -7,6 +7,7 @@ from MixtureModelAlgorithm import EM1, EM2, EM3  # Import from the original scri
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
+import math
 
 
 print("Initializing UI")
@@ -36,6 +37,9 @@ class MainWindow(QMainWindow):
         self.data = None  # Placeholder for the loaded data
         self.data_imported = False
         self.lab_ineff = False
+
+        self.replicates = 1
+        self.subset_factor = 1
 
         plt.rc('font', family='Calibri')
 
@@ -136,6 +140,9 @@ class MainWindow(QMainWindow):
         lambda_input = self.inputLambda.text()
         theta_input = self.inputTheta.text()
 
+        self.replicates = int(self.replicatesInput.text())
+        self.subset_factor = float(self.subsetSizeInput.text())
+
         # Process the input (convert string to list and float)
         try:
             pi = [float(x) for x in pi_input.split(',')] if pi_input else None
@@ -160,6 +167,7 @@ class MainWindow(QMainWindow):
         else:
             # self.resultDisplay.setText("Please select an algorithm")
             self.show_popup("Missing algorithm", "Please select an algorithm")
+            return
         
         pi_replicates, lam_replicates, aic_replicates = self.get_replicates(model, theta)
 
@@ -342,10 +350,11 @@ class MainWindow(QMainWindow):
         self.canvas.draw()
 
     def get_replicates(self, model, theta):
-        bootstrapped_data = self.bootstrap_dataset()
+        bootstrapped_data = self.bootstrap_dataset(self.replicates, self.subset_factor)
         pi_replicates = [] 
         lam_replicates = []
         aic_replicates = []
+        print(len(bootstrapped_data))
 
         for dataset in bootstrapped_data:
             if model == "M":
@@ -379,8 +388,9 @@ class MainWindow(QMainWindow):
         return pi_replicates, lam_replicates, aic_replicates
 
 
-    def bootstrap_dataset(self, replicates=10, size_fraction=2):
-        return [np.random.choice(self.data, size=len(self.data)//size_fraction, replace=True) for _ in range(replicates)]
+    def bootstrap_dataset(self, replicates, size_fraction):
+        print(math.floor(len(self.data)*size_fraction))
+        return [np.random.choice(self.data, size=math.floor(len(self.data)*size_fraction), replace=True) for _ in range(replicates)]
 
 
 if __name__ == "__main__":
