@@ -9,6 +9,7 @@ from PyQt6.QtCore import Qt
 from pyface.qt import QtGui, QtCore
 
 from MixtureModelAlgorithm import EM1, EM2, EM3  # Import from the original script
+from BlinkExtractionAlgorithm import Cluster2d1d
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
@@ -27,21 +28,68 @@ print("Initializing UI")
 class Visualization(HasTraits):
     scene =  Instance(MlabSceneModel, ())
 
-    @on_trait_change('scene.activated')
-    def update_plot(self):
-        df = window.localization_data
+    # @on_trait_change('scene.activated')
+    def update_plot(self, df):
         ## PLot to Show  
         # Extract X, Y, and time frame positions
         x_positions = df.iloc[:, 0]
         y_positions = df.iloc[:, 1]
         time_frame = df.iloc[:, 2]
 
-        # Combine X, Y, and time frame into a single array for DBSCAN
         positions = np.vstack((x_positions, y_positions, time_frame)).T      
         # Assuming positions is your combined 3D data (x, y, time)
         mlab.points3d(positions[:, 0], positions[:, 1], positions[:, 2], 
-                    scale_factor=40  # Reduce data point size by half
-                    )  # Adjust colormap as needed
+                    scale_factor=40)
+    
+    def visualize_spatial_clusters(self, all_temporal_clusters, df):
+        for cluster in all_temporal_clusters:
+            x_coords = []
+            y_coords = []
+            z_coords = []
+
+            # Generate unique color for each spatial cluster
+            color = np.random.rand(3)  # Random RGB color
+
+            for temporal_cluster in cluster:
+                for index, time_frame in temporal_cluster:
+                    # Assign unique x, y coordinates to each temporal cluster
+                    x_coords.append(df.iloc[index, 0])   # Assuming column 0 is X
+                    y_coords.append(df.iloc[index, 1])   # Assuming column 1 is Y
+                    z_coords.append(time_frame)
+
+            mlab.points3d(x_coords, y_coords, z_coords, color=tuple(color), scale_factor=40)
+    
+        # Adjust plot view for better visualization
+        mlab.view(azimuth=0, elevation=45)  # Example view angles (adjust as needed)
+        mlab.title('3D Spatial Clusters (Time on Z-axis)')
+        mlab.show()
+    
+    def plot_3d_temporal_clusters(self, all_temporal_clusters, df):
+        """Plots the temporal clusters in 3D with unique colors.
+        """
+
+        for cluster in all_temporal_clusters:
+
+            # Generate unique color for each spatial cluster
+
+            for temporal_cluster in cluster:
+                x_coords = []
+                y_coords = []
+                z_coords = []
+                color = np.random.rand(3)  # Random RGB color
+
+                for index, time_frame in temporal_cluster:
+                    # Assign unique x, y coordinates to each temporal cluster
+                    x_coords.append(df.iloc[index, 0])   # Assuming column 0 is X
+                    y_coords.append(df.iloc[index, 1])   # Assuming column 1 is Y
+                    z_coords.append(time_frame)
+
+                mlab.points3d(x_coords, y_coords, z_coords, color=tuple(color), scale_factor=40)
+
+        # Adjust plot view for better visualization
+        mlab.view(azimuth=0, elevation=45)  # Example view angles (adjust as needed)
+        mlab.title('3D Temporal Clusters (Time on Z-axis)')
+        mlab.show()
 
     view = View(Item('scene', editor=SceneEditor(scene_class=MayaviScene),
                         height=250, width=300, show_label=False),
@@ -55,8 +103,7 @@ class MayaviQWidget(QtGui.QWidget):
         layout.setSpacing(0)
         self.visualization = Visualization()
 
-        self.ui = self.visualization.edit_traits(parent=self,
-                                                    kind='subpanel').control
+        self.ui = self.visualization.edit_traits(parent=self, kind='subpanel').control
         layout.addWidget(self.ui)
         self.ui.setParent(self)
 
@@ -85,9 +132,14 @@ class MainWindow(QMainWindow):
 
         self.initialize_stoichiometry_graph()
 
+        self.mayavi_widget = MayaviQWidget(self)
+        self.localizationGraphSpace.addWidget(self.mayavi_widget)
+
     def initialize_connections(self):
         # Connect the buttons to their respective functions
-        self.runButton.clicked.connect(self.run_replicates)
+        self.runEMButton.clicked.connect(self.run_replicates)
+        self.runExtractionButton.clicked.connect(self.run_blink_extraction)
+
         # Connect Menu items to their functions
         self.actionLoadBlinking.triggered.connect(self.load_blinking)
         self.actionLoadLocalization.triggered.connect(self.load_localization)
@@ -170,8 +222,8 @@ class MainWindow(QMainWindow):
 
             self.localization_data_imported = True
             self.preprocessing_clicked(None)
-            mayavi_widget = MayaviQWidget(self)
-            self.localizationGraphSpace.addWidget(mayavi_widget)
+
+            self.mayavi_widget.visualization.update_plot(self.localization_data)
         elif self.localization_data_imported == True:
             pass
         else:
@@ -185,6 +237,17 @@ class MainWindow(QMainWindow):
         else:
             self.inputPi.setText("0,0,0")
     
+    def run_blink_extraction(self):
+        analyzer = Cluster2d1d(self.localization_data)
+        analyzer.extract_features()
+        analyzer.perform_dbscan()
+        # analyzer.visualize_clusters()
+        analyzer.get_all_temporal_clusters()
+        blinking_data = analyzer.get_blinking_data()
+        self.display_blinking_data(blinking_data)
+
+        self.mayavi_widget.visualization.visualize_spatial_clusters(analyzer.all_temporal_clusters, self.localization_data)
+
     def run_replicates(self):
         # Ensure data is loaded
         if self.blinking_data is None:
@@ -242,10 +305,14 @@ class MainWindow(QMainWindow):
 
         aic_means = np.mean(transposed_aic)
 
-        self.display_results(lam_means, pi_means, aic_means, model)
+        self.display_results(lam_means, pi_means, aic_means, pi_stds, model)
         self.plot_result_with_error(pi_means, pi_stds, model)
 
-    def display_results(self, lam, pi, AIC, model):
+    def display_blinking_data(self, data):
+        text_to_display = "\n".join(str(item) for item in data)
+        self.blinkListDisplay.setText(text_to_display)
+
+    def display_results(self, lam, pi, AIC, std, model):
         
         if not all(0 <= value <= 1 for value in pi if value is not None):
             QMessageBox.warning(self, "Unphysical Values Predicted", "Predicted distribution values are outside the expected range (0-1). This may indicate an issue with the data or chosen parameters.")
@@ -255,7 +322,7 @@ class MainWindow(QMainWindow):
         self.tableWidget.insertRow(row_position)
 
         # Add Result Values to the new row
-        item = QTableWidgetItem(str(round(pi[0]*100, 1)))
+        item = QTableWidgetItem(str(round(pi[0]*100, 1)) + "(±" + str(round(std[0]*100, 2)) + ")")
         # Make the item non-editable
         # item.setFlags(item.flags() & ~Qt.ItemIsEditable)
         self.tableWidget.setItem(row_position, 0, item)
@@ -263,13 +330,13 @@ class MainWindow(QMainWindow):
         if model == "M":
             item = QTableWidgetItem(str("N/A"))            
         else:
-            item = QTableWidgetItem(str(round(pi[1]*100, 1)))
+            item = QTableWidgetItem(str(round(pi[1]*100, 1)) + "(±" + str(round(std[1]*100, 2)) + ")")
         self.tableWidget.setItem(row_position, 1, item)
 
         if model != "M/D/T":
-            item = QTableWidgetItem(str("N/A"))            
+            item = QTableWidgetItem(str("N/A"))
         else:
-            item = QTableWidgetItem(str(round(pi[2]*100, 1)))
+            item = QTableWidgetItem(str(round(pi[2]*100, 1)) + "(±" + str(round(std[2]*100, 2)) + ")")
         self.tableWidget.setItem(row_position, 2, item)
 
         item = QTableWidgetItem(str(round(lam, 2)))

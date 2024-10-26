@@ -662,7 +662,7 @@ background-color: rgb(240, 240, 240);</string>
                </spacer>
               </item>
               <item>
-               <widget class="QPushButton" name="runButton">
+               <widget class="QPushButton" name="runEMButton">
                 <property name="maximumSize">
                  <size>
                   <width>230</width>
@@ -883,7 +883,7 @@ background-color: rgb(240, 240, 240);</string>
                </spacer>
               </item>
               <item>
-               <widget class="QPushButton" name="runButton_2">
+               <widget class="QPushButton" name="runExtractionButton">
                 <property name="maximumSize">
                  <size>
                   <width>230</width>
@@ -1013,7 +1013,7 @@ background-color: rgb(240, 240, 240);</string>
        <widget class="QWidget" name="page_16">
         <layout class="QHBoxLayout" name="horizontalLayout_9">
          <item>
-          <widget class="QTextEdit" name="textEdit">
+          <widget class="QTextEdit" name="blinkListDisplay">
            <property name="readOnly">
             <bool>true</bool>
            </property>
