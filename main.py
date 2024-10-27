@@ -6,7 +6,7 @@ import math
 from PyQt6.QtWidgets import QApplication, QMainWindow, QFileDialog, QTableWidgetItem, QMessageBox, QWidget, QVBoxLayout
 from PyQt6 import uic
 from PyQt6.QtCore import Qt
-from pyface.qt import QtGui, QtCore
+from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
 from MixtureModelAlgorithm import EM1, EM2, EM3  # Import from the original script
 from BlinkExtractionAlgorithm import Cluster2d1d
@@ -14,98 +14,68 @@ from BlinkExtractionAlgorithm import Cluster2d1d
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
-from mayavi import mlab
-from traits.api import HasTraits, Instance, on_trait_change
-from traitsui.api import View, Item
-from mayavi.core.ui.api import MayaviScene, MlabSceneModel, SceneEditor
-from mayavi.mlab import contour3d
+import pyvista as pv
 
-
+os.environ["TRAITSUI_TOOLKIT"] = "qt"
+os.environ["ETS_TOOLKIT"] = "qt"
 print("Initializing UI")
 
-## create Mayavi Widget and show
 
-class Visualization(HasTraits):
-    scene =  Instance(MlabSceneModel, ())
 
-    # @on_trait_change('scene.activated')
-    def update_plot(self, df):
-        ## PLot to Show  
-        # Extract X, Y, and time frame positions
-        x_positions = df.iloc[:, 0]
-        y_positions = df.iloc[:, 1]
-        time_frame = df.iloc[:, 2]
+import pyvista as pv
+import numpy as np
 
-        positions = np.vstack((x_positions, y_positions, time_frame)).T      
-        # Assuming positions is your combined 3D data (x, y, time)
-        mlab.points3d(positions[:, 0], positions[:, 1], positions[:, 2], 
-                    scale_factor=40)
-    
-    def visualize_spatial_clusters(self, all_temporal_clusters, df):
-        for cluster in all_temporal_clusters:
-            x_coords = []
-            y_coords = []
-            z_coords = []
+def update_plot_pyvista(df, sphere_radius=20):
+    # Extract X, Y, and time frame positions
+    x_positions = df.iloc[:, 0].to_numpy()
+    y_positions = df.iloc[:, 1].to_numpy()
+    time_frame = df.iloc[:, 2].to_numpy()
 
-            # Generate unique color for each spatial cluster
-            color = np.random.rand(3)  # Random RGB color
+    # Create a PolyData object for the points
+    points = pv.PolyData(np.column_stack((x_positions, y_positions, time_frame)))
 
-            for temporal_cluster in cluster:
-                for index, time_frame in temporal_cluster:
-                    # Assign unique x, y coordinates to each temporal cluster
-                    x_coords.append(df.iloc[index, 0])   # Assuming column 0 is X
-                    y_coords.append(df.iloc[index, 1])   # Assuming column 1 is Y
-                    z_coords.append(time_frame)
+    # Define a sphere for glyphing
+    sphere = pv.Sphere(radius=sphere_radius)
 
-            mlab.points3d(x_coords, y_coords, z_coords, color=tuple(color), scale_factor=40)
-    
-        # Adjust plot view for better visualization
-        mlab.view(azimuth=0, elevation=45)  # Example view angles (adjust as needed)
-        mlab.title('3D Spatial Clusters (Time on Z-axis)')
-        mlab.show()
-    
-    def plot_3d_temporal_clusters(self, all_temporal_clusters, df):
-        """Plots the temporal clusters in 3D with unique colors.
-        """
+    # Use glyphs to duplicate the sphere at each point's position
+    glyphs = points.glyph(scale=False, geom=sphere)
 
-        for cluster in all_temporal_clusters:
+    # Create a plotter and add the glyphs
+    plotter = pv.Plotter()
+    plotter.add_mesh(glyphs, color="blue")  # Adjust color as needed
 
-            # Generate unique color for each spatial cluster
+    # Customize and show plot
+    plotter.add_axes()
+    plotter.camera_position = 'xy'  # View from top-down perspective
+    plotter.show()
 
-            for temporal_cluster in cluster:
-                x_coords = []
-                y_coords = []
-                z_coords = []
-                color = np.random.rand(3)  # Random RGB color
 
-                for index, time_frame in temporal_cluster:
-                    # Assign unique x, y coordinates to each temporal cluster
-                    x_coords.append(df.iloc[index, 0])   # Assuming column 0 is X
-                    y_coords.append(df.iloc[index, 1])   # Assuming column 1 is Y
-                    z_coords.append(time_frame)
+def visualize_spatial_clusters_pyvista(all_temporal_clusters, df):
+    plotter = pv.Plotter()
 
-                mlab.points3d(x_coords, y_coords, z_coords, color=tuple(color), scale_factor=40)
+    for cluster_idx, cluster in enumerate(all_temporal_clusters):
+        x_coords = []
+        y_coords = []
+        z_coords = []
 
-        # Adjust plot view for better visualization
-        mlab.view(azimuth=0, elevation=45)  # Example view angles (adjust as needed)
-        mlab.title('3D Temporal Clusters (Time on Z-axis)')
-        mlab.show()
+        for temporal_cluster in cluster:
+            for index, time_frame in temporal_cluster:
+                x_coords.append(df.iloc[index, 0])
+                y_coords.append(df.iloc[index, 1])
+                z_coords.append(time_frame)
 
-    view = View(Item('scene', editor=SceneEditor(scene_class=MayaviScene),
-                        height=250, width=300, show_label=False),
-                resizable=True )
+        # Create a Point Cloud
+        points = pv.PolyData(np.column_stack((x_coords, y_coords, z_coords)))
 
-class MayaviQWidget(QtGui.QWidget):
-    def __init__(self, parent=None):
-        QtGui.QWidget.__init__(self, parent)
-        layout = QtGui.QVBoxLayout(self)
-        layout.setContentsMargins(0,0,0,0)
-        layout.setSpacing(0)
-        self.visualization = Visualization()
+        # Assign a unique color to the point cloud
+        color = np.random.rand(3)  # Random RGB color
+        points.point_data['Colors'] = np.tile(color, (points.n_points, 1))
 
-        self.ui = self.visualization.edit_traits(parent=self, kind='subpanel').control
-        layout.addWidget(self.ui)
-        self.ui.setParent(self)
+        # Plot the point cloud
+        plotter.add_mesh(points, color=True, point_size=5)  # Adjust point size as needed
+
+    plotter.show()
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -131,9 +101,7 @@ class MainWindow(QMainWindow):
         self.subset_factor = 1
 
         self.initialize_stoichiometry_graph()
-
-        self.mayavi_widget = MayaviQWidget(self)
-        self.localizationGraphSpace.addWidget(self.mayavi_widget)
+        self.initialize_blinking_graph()
 
     def initialize_connections(self):
         # Connect the buttons to their respective functions
@@ -170,6 +138,22 @@ class MainWindow(QMainWindow):
         # Create a canvas and embed it in the graphWidget
         self.canvas = FigureCanvasQTAgg(self.fig)
         self.graphWidget.layout().addWidget(self.canvas)
+
+    def initialize_blinking_graph(self):
+
+        # Create a Matplotlib figure and axes
+        self.fig2, self.ax2 = plt.subplots(figsize=(10, 6))
+        
+        self.bars2 = self.ax.bar(range(1), [0], color='gray', edgecolor='black', width=0.5)        # Set the X-axis labels and Y-axis limits
+
+        self.ax2.set_xlabel("Sorted Blinking Event Indices")
+        self.ax2.set_ylabel("Number of Blinks")
+        # Reduce font size
+        self.ax2.tick_params(axis='both', labelsize=9)
+
+        # Create a canvas and embed it in the graphWidget
+        self.canvas2 = FigureCanvasQTAgg(self.fig2)
+        self.blinkGraph.layout().addWidget(self.canvas2)
 
     def resource_path(self, relative_path):
         """ Get the absolute path to the resource, works in development and after PyInstaller packaging """
@@ -223,7 +207,6 @@ class MainWindow(QMainWindow):
             self.localization_data_imported = True
             self.preprocessing_clicked(None)
 
-            self.mayavi_widget.visualization.update_plot(self.localization_data)
         elif self.localization_data_imported == True:
             pass
         else:
@@ -245,8 +228,9 @@ class MainWindow(QMainWindow):
         analyzer.get_all_temporal_clusters()
         blinking_data = analyzer.get_blinking_data()
         self.display_blinking_data(blinking_data)
+        self.plot_blinking(blinking_data)
 
-        self.mayavi_widget.visualization.visualize_spatial_clusters(analyzer.all_temporal_clusters, self.localization_data)
+
 
     def run_replicates(self):
         # Ensure data is loaded
@@ -378,6 +362,22 @@ class MainWindow(QMainWindow):
 
     def show_popup(self, title, message):
         QMessageBox.information(self, title, message)
+
+    def plot_blinking(self,blinking_data):
+
+        # Sort the blinking data
+        sorted_counts = sorted(blinking_data)
+
+        self.ax2.clear()
+        # Plot the distribution of blinking events
+        self.bars2 = self.ax2.bar(range(len(sorted_counts)), sorted_counts)
+        self.ax2.set_title("Distribution of Blinking Events")
+        self.ax2.set_xlabel("Cluster Index")
+        self.ax2.set_ylabel("Number of Blinks")
+        # Save the sorted counts to a CSV file
+        np.savetxt("exported_data.csv", sorted_counts, delimiter=",")
+        self.canvas2.draw()
+
 
     def plot_dataset(self):
         
