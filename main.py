@@ -21,7 +21,6 @@ os.environ["ETS_TOOLKIT"] = "qt"
 print("Initializing UI")
 
 
-
 import pyvista as pv
 import numpy as np
 
@@ -50,10 +49,10 @@ def update_plot_pyvista(df, sphere_radius=20):
     plotter.show()
 
 
-def visualize_spatial_clusters_pyvista(all_temporal_clusters, df):
+def visualize_spatial_clusters_pyvista(all_temporal_clusters, df, sphere_radius=20):
     plotter = pv.Plotter()
 
-    for cluster_idx, cluster in enumerate(all_temporal_clusters):
+    for _, cluster in enumerate(all_temporal_clusters):
         x_coords = []
         y_coords = []
         z_coords = []
@@ -64,16 +63,54 @@ def visualize_spatial_clusters_pyvista(all_temporal_clusters, df):
                 y_coords.append(df.iloc[index, 1])
                 z_coords.append(time_frame)
 
-        # Create a Point Cloud
+        # Create a point cloud
         points = pv.PolyData(np.column_stack((x_coords, y_coords, z_coords)))
 
-        # Assign a unique color to the point cloud
-        color = np.random.rand(3)  # Random RGB color
-        points.point_data['Colors'] = np.tile(color, (points.n_points, 1))
+        # Create a sphere glyph
+        sphere = pv.Sphere(radius=sphere_radius)
+        glyphs = points.glyph(scale=False, geom=sphere)
 
-        # Plot the point cloud
-        plotter.add_mesh(points, color=True, point_size=5)  # Adjust point size as needed
+        # Assign a unique color to the glyph
+        color = np.random.rand(3)
 
+        # Add the glyph to the plotter
+        plotter.add_mesh(glyphs, color=color)
+    print("done")
+    # Customize and show plot
+    plotter.add_axes()
+    plotter.camera_position = 'xy'  # View from top-down perspective
+    plotter.show()
+
+def visualize_temporal_clusters_pyvista(all_temporal_clusters, df, sphere_radius=20):
+    plotter = pv.Plotter()
+
+    for _, cluster in enumerate(all_temporal_clusters):
+
+        for temporal_cluster in cluster:
+            x_coords = []
+            y_coords = []
+            z_coords = []
+            for index, time_frame in temporal_cluster:
+                x_coords.append(df.iloc[index, 0])
+                y_coords.append(df.iloc[index, 1])
+                z_coords.append(time_frame)
+
+            # Create a point cloud
+            points = pv.PolyData(np.column_stack((x_coords, y_coords, z_coords)))
+
+            # Create a sphere glyph
+            sphere = pv.Sphere(radius=sphere_radius)
+            glyphs = points.glyph(scale=False, geom=sphere)
+
+            # Assign a unique color to the glyph
+            color = np.random.rand(3)
+
+            # Add the glyph to the plotter
+            plotter.add_mesh(glyphs, color=color)
+    print("done")
+    # Customize and show plot
+    plotter.add_axes()
+    plotter.camera_position = 'xy'  # View from top-down perspective
     plotter.show()
 
 
@@ -96,6 +133,7 @@ class MainWindow(QMainWindow):
         self.localization_data = None
         self.localization_data_imported = False
         self.lab_ineff = False
+        self.analyzer = None
 
         self.replicates = 1
         self.subset_factor = 1
@@ -107,6 +145,8 @@ class MainWindow(QMainWindow):
         # Connect the buttons to their respective functions
         self.runEMButton.clicked.connect(self.run_replicates)
         self.runExtractionButton.clicked.connect(self.run_blink_extraction)
+        self.graphButton.clicked.connect(self.choose_graph)
+
 
         # Connect Menu items to their functions
         self.actionLoadBlinking.triggered.connect(self.load_blinking)
@@ -221,15 +261,25 @@ class MainWindow(QMainWindow):
             self.inputPi.setText("0,0,0")
     
     def run_blink_extraction(self):
-        analyzer = Cluster2d1d(self.localization_data)
-        analyzer.extract_features()
-        analyzer.perform_dbscan()
+        self.analyzer = Cluster2d1d(self.localization_data)
+        self.analyzer.extract_features()
+        self.analyzer.perform_dbscan()
         # analyzer.visualize_clusters()
-        analyzer.get_all_temporal_clusters()
-        blinking_data = analyzer.get_blinking_data()
+        self.analyzer.get_all_temporal_clusters()
+        blinking_data = self.analyzer.get_blinking_data()
         self.display_blinking_data(blinking_data)
         self.plot_blinking(blinking_data)
 
+    def choose_graph(self):
+        if self.radioOriginal.isChecked():
+            if self.localization_data:
+                update_plot_pyvista(self.localization_data)
+        elif self.radioSpatial.isChecked():
+            if self.analyzer:
+                visualize_spatial_clusters_pyvista(self.analyzer.all_temporal_clusters, self.localization_data)
+        else:
+            if self.analyzer:
+                visualize_temporal_clusters_pyvista(self.analyzer.all_temporal_clusters, self.localization_data)
 
 
     def run_replicates(self):
