@@ -3,13 +3,14 @@ import numpy as np
 import pandas as pd
 import math
 
-from PyQt6.QtWidgets import QApplication, QMainWindow, QFileDialog, QTableWidgetItem, QMessageBox, QWidget, QVBoxLayout
+from PyQt6.QtWidgets import QApplication, QMainWindow, QFileDialog, QTableWidgetItem, QMessageBox, QWidget, QVBoxLayout, QListWidgetItem
 from PyQt6 import uic
 from PyQt6.QtCore import Qt
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
 from MixtureModelAlgorithm import EM1, EM2, EM3  # Import from the original script
 from BlinkExtractionAlgorithm import Cluster2d1d
+from LocalPrecisionAlgorithm import Loc_Acc
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
@@ -20,9 +21,6 @@ os.environ["TRAITSUI_TOOLKIT"] = "qt"
 os.environ["ETS_TOOLKIT"] = "qt"
 print("Initializing UI")
 
-
-import pyvista as pv
-import numpy as np
 
 def update_plot_pyvista(df, sphere_radius=20):
     # Extract X, Y, and time frame positions
@@ -43,8 +41,9 @@ def update_plot_pyvista(df, sphere_radius=20):
     plotter = pv.Plotter()
     plotter.add_mesh(glyphs, color="blue")  # Adjust color as needed
 
-    # Customize and show plot
-    plotter.add_axes()
+    labels = dict(zlabel='Time (frame)', xlabel='X position (nm)', ylabel='Y position (nm)')
+    plotter.show_grid(**labels)
+    plotter.add_axes(**labels)
     plotter.camera_position = 'xy'  # View from top-down perspective
     plotter.show()
 
@@ -75,9 +74,14 @@ def visualize_spatial_clusters_pyvista(all_temporal_clusters, df, sphere_radius=
 
         # Add the glyph to the plotter
         plotter.add_mesh(glyphs, color=color)
-    print("done")
-    # Customize and show plot
-    plotter.add_axes()
+
+    labels = dict(zlabel='Time (frame)', xlabel='X position (nm)', ylabel='Y position (nm)')
+    plotter.show_grid(**labels)
+    plotter.add_axes(**labels)
+    # light = pv.Light(position=(10, 10, 10))
+    # light.diffuse_color = 1.0, 0.0, 0.0
+    # plotter.add_light(light)
+    # plotter.enable_ssao()
     plotter.camera_position = 'xy'  # View from top-down perspective
     plotter.show()
 
@@ -107,9 +111,10 @@ def visualize_temporal_clusters_pyvista(all_temporal_clusters, df, sphere_radius
 
             # Add the glyph to the plotter
             plotter.add_mesh(glyphs, color=color)
-    print("done")
-    # Customize and show plot
-    plotter.add_axes()
+    
+    labels = dict(zlabel='Time (frame)', xlabel='X position (nm)', ylabel='Y position (nm)')
+    plotter.show_grid(**labels)
+    plotter.add_axes(**labels)
     plotter.camera_position = 'xy'  # View from top-down perspective
     plotter.show()
 
@@ -137,6 +142,7 @@ class MainWindow(QMainWindow):
 
         self.replicates = 1
         self.subset_factor = 1
+        self.local_precision = -1
 
         self.initialize_stoichiometry_graph()
         self.initialize_blinking_graph()
@@ -147,7 +153,6 @@ class MainWindow(QMainWindow):
         self.runExtractionButton.clicked.connect(self.run_blink_extraction)
         self.graphButton.clicked.connect(self.choose_graph)
 
-
         # Connect Menu items to their functions
         self.actionLoadBlinking.triggered.connect(self.load_blinking)
         self.actionLoadLocalization.triggered.connect(self.load_localization)
@@ -155,6 +160,7 @@ class MainWindow(QMainWindow):
         self.radioEM1.clicked.connect(self.set_default_pi)
         self.radioEM2.clicked.connect(self.set_default_pi)
         self.radioEM3.clicked.connect(self.set_default_pi)
+        self.graph2dButton.clicked.connect(self.graph_2d_gaussian)
 
         self.preprocessingSwitch.mousePressEvent = self.preprocessing_clicked
         self.stoichiometrySwitch.mousePressEvent = self.stoichiometry_clicked
@@ -184,10 +190,10 @@ class MainWindow(QMainWindow):
         # Create a Matplotlib figure and axes
         self.fig2, self.ax2 = plt.subplots(figsize=(10, 6))
         
-        self.bars2 = self.ax.bar(range(1), [0], color='gray', edgecolor='black', width=0.5)        # Set the X-axis labels and Y-axis limits
+        self.ax2.hist([], bins='auto', edgecolor='white')
 
-        self.ax2.set_xlabel("Sorted Blinking Event Indices")
-        self.ax2.set_ylabel("Number of Blinks")
+        self.ax2.set_xlabel("Number of Blinks")
+        self.ax2.set_ylabel("Frequency")
         # Reduce font size
         self.ax2.tick_params(axis='both', labelsize=9)
 
@@ -246,6 +252,11 @@ class MainWindow(QMainWindow):
 
             self.localization_data_imported = True
             self.preprocessing_clicked(None)
+            p, e = Loc_Acc(self.localization_data)
+
+            self.local_precision = p
+            item = QListWidgetItem(f"{p:.2f}±({e:.2f})")
+            self.valueListWidget.insertItem(1, item)
 
         elif self.localization_data_imported == True:
             pass
@@ -261,10 +272,16 @@ class MainWindow(QMainWindow):
             self.inputPi.setText("0,0,0")
     
     def run_blink_extraction(self):
+        if not self.localization_data_imported:
+            self.show_popup("Missing data", "Please load a localization file before running the extraction")
+            return
+
         self.analyzer = Cluster2d1d(self.localization_data)
+        self.analyzer.epsilon = int(self.epsInput.text())
+        self.analyzer.min_sample = int(self.minSampleInput.text())
+        self.analyzer.proximity = int(self.proxInput.text())
         self.analyzer.extract_features()
         self.analyzer.perform_dbscan()
-        # analyzer.visualize_clusters()
         self.analyzer.get_all_temporal_clusters()
         blinking_data = self.analyzer.get_blinking_data()
         self.display_blinking_data(blinking_data)
@@ -272,7 +289,7 @@ class MainWindow(QMainWindow):
 
     def choose_graph(self):
         if self.radioOriginal.isChecked():
-            if self.localization_data:
+            if self.localization_data_imported:
                 update_plot_pyvista(self.localization_data)
         elif self.radioSpatial.isChecked():
             if self.analyzer:
@@ -280,7 +297,6 @@ class MainWindow(QMainWindow):
         else:
             if self.analyzer:
                 visualize_temporal_clusters_pyvista(self.analyzer.all_temporal_clusters, self.localization_data)
-
 
     def run_replicates(self):
         # Ensure data is loaded
@@ -339,14 +355,16 @@ class MainWindow(QMainWindow):
 
         aic_means = np.mean(transposed_aic)
 
-        self.display_results(lam_means, pi_means, aic_means, pi_stds, model)
+        lam_std = np.std(transposed_lam)
+
+        self.display_results(lam_means, pi_means, aic_means, pi_stds, lam_std, model)
         self.plot_result_with_error(pi_means, pi_stds, model)
 
     def display_blinking_data(self, data):
         text_to_display = "\n".join(str(item) for item in data)
         self.blinkListDisplay.setText(text_to_display)
 
-    def display_results(self, lam, pi, AIC, std, model):
+    def display_results(self, lam, pi, AIC, pi_std, lam_std, model):
         
         if not all(0 <= value <= 1 for value in pi if value is not None):
             QMessageBox.warning(self, "Unphysical Values Predicted", "Predicted distribution values are outside the expected range (0-1). This may indicate an issue with the data or chosen parameters.")
@@ -356,7 +374,7 @@ class MainWindow(QMainWindow):
         self.tableWidget.insertRow(row_position)
 
         # Add Result Values to the new row
-        item = QTableWidgetItem(str(round(pi[0]*100, 1)) + "(±" + str(round(std[0]*100, 2)) + ")")
+        item = QTableWidgetItem(str(round(pi[0]*100, 1)) + "(±" + str(round(pi_std[0]*100, 2)) + ")")
         # Make the item non-editable
         # item.setFlags(item.flags() & ~Qt.ItemIsEditable)
         self.tableWidget.setItem(row_position, 0, item)
@@ -364,16 +382,16 @@ class MainWindow(QMainWindow):
         if model == "M":
             item = QTableWidgetItem(str("N/A"))            
         else:
-            item = QTableWidgetItem(str(round(pi[1]*100, 1)) + "(±" + str(round(std[1]*100, 2)) + ")")
+            item = QTableWidgetItem(str(round(pi[1]*100, 1)) + "(±" + str(round(pi_std[1]*100, 2)) + ")")
         self.tableWidget.setItem(row_position, 1, item)
 
         if model != "M/D/T":
             item = QTableWidgetItem(str("N/A"))
         else:
-            item = QTableWidgetItem(str(round(pi[2]*100, 1)) + "(±" + str(round(std[2]*100, 2)) + ")")
+            item = QTableWidgetItem(str(round(pi[2]*100, 1)) + "(±" + str(round(pi_std[2]*100, 2)) + ")")
         self.tableWidget.setItem(row_position, 2, item)
 
-        item = QTableWidgetItem(str(round(lam, 2)))
+        item = QTableWidgetItem(str(round(lam, 2)) + "(±" + str(round(lam_std, 2)) + ")")
         self.tableWidget.setItem(row_position, 3, item)
 
         item = QTableWidgetItem(str(round(AIC, 2)))
@@ -420,10 +438,9 @@ class MainWindow(QMainWindow):
 
         self.ax2.clear()
         # Plot the distribution of blinking events
-        self.bars2 = self.ax2.bar(range(len(sorted_counts)), sorted_counts)
-        self.ax2.set_title("Distribution of Blinking Events")
-        self.ax2.set_xlabel("Cluster Index")
-        self.ax2.set_ylabel("Number of Blinks")
+        self.ax2.hist(sorted_counts, bins=max(sorted_counts))
+        self.ax2.set_xlabel("Number of Blinks")
+        self.ax2.set_ylabel("Frequency")
         # Save the sorted counts to a CSV file
         np.savetxt("exported_data.csv", sorted_counts, delimiter=",")
         self.canvas2.draw()
@@ -446,6 +463,9 @@ class MainWindow(QMainWindow):
         self.ax.set_ylabel("Number of Blinks")
 
         self.canvas.draw()
+
+    def graph_2d_gaussian(self):
+        pass
 
     def get_replicates(self, model, theta):
         bootstrapped_data = self.bootstrap_dataset(self.replicates, self.subset_factor)
