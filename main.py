@@ -465,7 +465,10 @@ class MainWindow(QMainWindow):
         self.canvas.draw()
 
     def graph_2d_gaussian(self):
-        pass
+        if self.analyzer:
+            max_res = int(self.resInput.text())
+            alpha_scale = float(self.alphaScaleInput.text())
+            self.analyzer.plot_gaussian_clusters(self.local_precision, alpha_scale=alpha_scale, intensity_scale=0.3, min_alpha=0.05, max_res=max_res)
 
     def get_replicates(self, model, theta):
         bootstrapped_data = self.bootstrap_dataset(self.replicates, self.subset_factor)
