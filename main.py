@@ -3,120 +3,55 @@ import numpy as np
 import pandas as pd
 import math
 
-from PyQt6.QtWidgets import QApplication, QMainWindow, QFileDialog, QTableWidgetItem, QMessageBox, QWidget, QVBoxLayout, QListWidgetItem
+from PyQt6.QtWidgets import QDialog, QPushButton, QApplication, QLabel, QMainWindow, QFileDialog, QTableWidgetItem, QMessageBox, QWidget, QVBoxLayout, QListWidgetItem, QDockWidget
 from PyQt6 import uic
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QGuiApplication
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
 from MixtureModelAlgorithm import EM1, EM2, EM3  # Import from the original script
 from BlinkExtractionAlgorithm import Cluster2d1d
 from LocalPrecisionAlgorithm import Loc_Acc
+from PyVistaPlotter import *
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
-import pyvista as pv
 
 os.environ["TRAITSUI_TOOLKIT"] = "qt"
 os.environ["ETS_TOOLKIT"] = "qt"
 print("Initializing UI")
 
 
-def update_plot_pyvista(df, sphere_radius=20):
-    # Extract X, Y, and time frame positions
-    x_positions = df.iloc[:, 0].to_numpy()
-    y_positions = df.iloc[:, 1].to_numpy()
-    time_frame = df.iloc[:, 2].to_numpy()
+class AboutDialog(QDialog):
+    def __init__(self):
+        super(AboutDialog, self).__init__()
 
-    # Create a PolyData object for the points
-    points = pv.PolyData(np.column_stack((x_positions, y_positions, time_frame)))
+        self.setWindowTitle("About")
 
-    # Define a sphere for glyphing
-    sphere = pv.Sphere(radius=sphere_radius)
+        # Layout
+        layout = QVBoxLayout()
 
-    # Use glyphs to duplicate the sphere at each point's position
-    glyphs = points.glyph(scale=False, geom=sphere)
+        # Program information
+        info_label = QLabel(
+            "Protein Stoichiometry Quantifier\n\n"
+            "Date: 2024-11\n"
+            "Developed by: Eric Shi in the Milstein Lab\n"
+            "This program utilizes algorithms developed by:\n"
+            "Artittaya Boonkird, Daniel F Nino and Joshua N Milstein in the Milstein Lab: https://doi.org/10.1093/bioadv/vbab032 for the prediction of protein stoichiometry\n"
+            "Ulrike Endesfelder, Sebastian Malkusch, Franziska Fricke and Mike Heilemann: https://pubmed.ncbi.nlm.nih.gov/24522395/ for the estimation of localization precision\n"
+        )
+        info_label.setOpenExternalLinks(True)  # Allow clickable links
+        info_label.setWordWrap(True)
 
-    # Create a plotter and add the glyphs
-    plotter = pv.Plotter()
-    plotter.add_mesh(glyphs, color="blue")  # Adjust color as needed
+        layout.addWidget(info_label)
 
-    labels = dict(zlabel='Time (frame)', xlabel='X position (nm)', ylabel='Y position (nm)')
-    plotter.show_grid(**labels)
-    plotter.add_axes(**labels)
-    plotter.camera_position = 'xy'  # View from top-down perspective
-    plotter.show()
+        # OK button to close the dialog
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.close)
+        layout.addWidget(close_button)
 
-
-def visualize_spatial_clusters_pyvista(all_temporal_clusters, df, sphere_radius=20):
-    plotter = pv.Plotter()
-
-    for _, cluster in enumerate(all_temporal_clusters):
-        x_coords = []
-        y_coords = []
-        z_coords = []
-
-        for temporal_cluster in cluster:
-            for index, time_frame in temporal_cluster:
-                x_coords.append(df.iloc[index, 0])
-                y_coords.append(df.iloc[index, 1])
-                z_coords.append(time_frame)
-
-        # Create a point cloud
-        points = pv.PolyData(np.column_stack((x_coords, y_coords, z_coords)))
-
-        # Create a sphere glyph
-        sphere = pv.Sphere(radius=sphere_radius)
-        glyphs = points.glyph(scale=False, geom=sphere)
-
-        # Assign a unique color to the glyph
-        color = np.random.rand(3)
-
-        # Add the glyph to the plotter
-        plotter.add_mesh(glyphs, color=color)
-
-    labels = dict(zlabel='Time (frame)', xlabel='X position (nm)', ylabel='Y position (nm)')
-    plotter.show_grid(**labels)
-    plotter.add_axes(**labels)
-    # light = pv.Light(position=(10, 10, 10))
-    # light.diffuse_color = 1.0, 0.0, 0.0
-    # plotter.add_light(light)
-    # plotter.enable_ssao()
-    plotter.camera_position = 'xy'  # View from top-down perspective
-    plotter.show()
-
-def visualize_temporal_clusters_pyvista(all_temporal_clusters, df, sphere_radius=20):
-    plotter = pv.Plotter()
-
-    for _, cluster in enumerate(all_temporal_clusters):
-
-        for temporal_cluster in cluster:
-            x_coords = []
-            y_coords = []
-            z_coords = []
-            for index, time_frame in temporal_cluster:
-                x_coords.append(df.iloc[index, 0])
-                y_coords.append(df.iloc[index, 1])
-                z_coords.append(time_frame)
-
-            # Create a point cloud
-            points = pv.PolyData(np.column_stack((x_coords, y_coords, z_coords)))
-
-            # Create a sphere glyph
-            sphere = pv.Sphere(radius=sphere_radius)
-            glyphs = points.glyph(scale=False, geom=sphere)
-
-            # Assign a unique color to the glyph
-            color = np.random.rand(3)
-
-            # Add the glyph to the plotter
-            plotter.add_mesh(glyphs, color=color)
-    
-    labels = dict(zlabel='Time (frame)', xlabel='X position (nm)', ylabel='Y position (nm)')
-    plotter.show_grid(**labels)
-    plotter.add_axes(**labels)
-    plotter.camera_position = 'xy'  # View from top-down perspective
-    plotter.show()
+        self.setLayout(layout)
 
 
 class MainWindow(QMainWindow):
@@ -146,6 +81,31 @@ class MainWindow(QMainWindow):
 
         self.initialize_stoichiometry_graph()
         self.initialize_blinking_graph()
+        self.set_window_size()
+
+    def show_about_dialog(self):
+        """Display the About dialog."""
+        about_dialog = AboutDialog()
+        about_dialog.exec()  # Show the dialog modally
+    
+    def set_window_size(self):
+        # Get the primary screen's geometry
+        screen = QGuiApplication.primaryScreen()
+        screen_geometry = screen.geometry()
+        screen_width = screen_geometry.width()
+        screen_height = screen_geometry.height()
+
+        # Calculate the new dimensions (2/3 of the screen size)
+        new_width = int(screen_width * 2 / 3)
+        new_height = int(screen_height * 2 / 3)
+
+        # Center the window and resize
+        self.setGeometry(
+            int((screen_width - new_width) / 2),
+            int((screen_height - new_height) / 2),
+            new_width,
+            new_height,
+        )
 
     def initialize_connections(self):
         # Connect the buttons to their respective functions
@@ -157,6 +117,8 @@ class MainWindow(QMainWindow):
         self.actionLoadBlinking.triggered.connect(self.load_blinking)
         self.actionLoadLocalization.triggered.connect(self.load_localization)
         self.actionGraph_Dataset.triggered.connect(self.plot_dataset)
+        self.actionAbout.triggered.connect(self.show_about_dialog)
+
         self.radioEM1.clicked.connect(self.set_default_pi)
         self.radioEM2.clicked.connect(self.set_default_pi)
         self.radioEM3.clicked.connect(self.set_default_pi)
@@ -252,8 +214,12 @@ class MainWindow(QMainWindow):
 
             self.localization_data_imported = True
             self.preprocessing_clicked(None)
-            p, e = Loc_Acc(self.localization_data)
-
+            try:
+                p, e = Loc_Acc(self.localization_data)
+            except:
+                item = QListWidgetItem(f"error")
+                self.valueListWidget.insertItem(1, item)
+                return
             self.local_precision = p
             item = QListWidgetItem(f"{p:.2f}±({e:.2f})")
             self.valueListWidget.insertItem(1, item)
@@ -345,7 +311,7 @@ class MainWindow(QMainWindow):
         transposed_lam = lam_replicates
         transposed_aic = aic_replicates
 
-        print(transposed_pi, transposed_aic, transposed_lam)
+        # print(transposed_pi, transposed_aic, transposed_lam)
 
         # Calculate the mean for each element using NumPy
         pi_means = [np.mean(sublist) for sublist in transposed_pi]
@@ -445,7 +411,6 @@ class MainWindow(QMainWindow):
         np.savetxt("exported_data.csv", sorted_counts, delimiter=",")
         self.canvas2.draw()
 
-
     def plot_dataset(self):
         
         if not self.blinking_data_imported:
@@ -466,16 +431,20 @@ class MainWindow(QMainWindow):
 
     def graph_2d_gaussian(self):
         if self.analyzer:
-            max_res = int(self.resInput.text())
-            alpha_scale = float(self.alphaScaleInput.text())
-            self.analyzer.plot_gaussian_clusters(self.local_precision, alpha_scale=alpha_scale, intensity_scale=0.3, min_alpha=0.05, max_res=max_res)
-
+            max_res = 8192
+            alpha_scale = 0.8
+            if self.radio2dOriginal.isChecked():
+                self.analyzer.plot_original_gaussian(self.local_precision, alpha_scale=alpha_scale, intensity_scale=0.3, min_alpha=0.05, max_res=max_res)
+            elif self.radio2dClusters.isChecked():
+                self.analyzer.plot_gaussian_clusters(self.local_precision, alpha_scale=alpha_scale, intensity_scale=0.3, min_alpha=0.05, max_res=max_res)
+            
     def get_replicates(self, model, theta):
         bootstrapped_data = self.bootstrap_dataset(self.replicates, self.subset_factor)
         pi_replicates = [] 
         lam_replicates = []
         aic_replicates = []
-        print(len(bootstrapped_data))
+        # print(len(bootstrapped_data))
+        progress = 0
 
         for dataset in bootstrapped_data:
             if model == "M":
@@ -505,13 +474,15 @@ class MainWindow(QMainWindow):
                 pi_replicates.append(em3.pi)
                 lam_replicates.append(em3.lam)
                 aic_replicates.append(em3.AIC)
+            progress += 1
+            if progress % 10 == 0:
+                print(round(progress/len(bootstrapped_data), 3)*100, "%")
         
         return pi_replicates, lam_replicates, aic_replicates
 
-
     def bootstrap_dataset(self, replicates, size_fraction):
-        print(math.floor(len(self.blinking_data)*size_fraction))
-        return [np.random.choice(self.blinking_data, size=math.floor(len(self.blinking_data)*size_fraction), replace=True) for _ in range(replicates)]
+        # print(math.floor(len(self.blinking_data)*size_fraction))
+        return [np.random.choice(self.blinking_data, size=math.floor(len(self.blinking_data)*size_fraction), replace=False) for _ in range(replicates)]
 
 
 if __name__ == "__main__":

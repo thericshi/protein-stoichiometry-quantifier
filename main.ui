@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>830</width>
-    <height>569</height>
+    <width>800</width>
+    <height>566</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -322,7 +322,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>830</width>
+     <width>800</width>
      <height>18</height>
     </rect>
    </property>
@@ -339,14 +339,21 @@
     </property>
     <addaction name="actionGraph_Dataset"/>
    </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionAbout"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuGraph"/>
+   <addaction name="menuHelp"/>
   </widget>
   <widget class="QDockWidget" name="confDock">
    <property name="minimumSize">
     <size>
      <width>274</width>
-     <height>461</height>
+     <height>476</height>
     </size>
    </property>
    <property name="maximumSize">
@@ -461,7 +468,7 @@ background-color: rgb(240, 240, 240);</string>
                 <property name="sizeHint" stdset="0">
                  <size>
                   <width>230</width>
-                  <height>20</height>
+                  <height>10</height>
                  </size>
                 </property>
                </spacer>
@@ -529,7 +536,7 @@ background-color: rgb(240, 240, 240);</string>
                 <property name="sizeHint" stdset="0">
                  <size>
                   <width>230</width>
-                  <height>20</height>
+                  <height>10</height>
                  </size>
                 </property>
                </spacer>
@@ -622,7 +629,7 @@ background-color: rgb(240, 240, 240);</string>
                 <property name="sizeHint" stdset="0">
                  <size>
                   <width>40</width>
-                  <height>20</height>
+                  <height>10</height>
                  </size>
                 </property>
                </spacer>
@@ -680,7 +687,7 @@ background-color: rgb(240, 240, 240);</string>
                 <property name="sizeHint" stdset="0">
                  <size>
                   <width>40</width>
-                  <height>20</height>
+                  <height>10</height>
                  </size>
                 </property>
                </spacer>
@@ -763,7 +770,7 @@ background-color: rgb(240, 240, 240);</string>
               <property name="sizeHint" stdset="0">
                <size>
                 <width>230</width>
-                <height>20</height>
+                <height>10</height>
                </size>
               </property>
              </spacer>
@@ -875,7 +882,7 @@ background-color: rgb(240, 240, 240);</string>
               <property name="sizeHint" stdset="0">
                <size>
                 <width>231</width>
-                <height>20</height>
+                <height>10</height>
                </size>
               </property>
              </spacer>
@@ -944,7 +951,7 @@ background-color: rgb(240, 240, 240);</string>
               <property name="sizeHint" stdset="0">
                <size>
                 <width>40</width>
-                <height>20</height>
+                <height>10</height>
                </size>
               </property>
              </spacer>
@@ -957,57 +964,30 @@ background-color: rgb(240, 240, 240);</string>
              </widget>
             </item>
             <item>
-             <layout class="QFormLayout" name="formLayout_4">
-              <property name="rightMargin">
-               <number>4</number>
+             <widget class="QGroupBox" name="groupBox_3">
+              <property name="styleSheet">
+               <string notr="true">background-color: rgb(255, 255, 255);</string>
               </property>
-              <item row="0" column="1">
-               <widget class="QLineEdit" name="resInput">
-                <property name="maximumSize">
-                 <size>
-                  <width>100</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="styleSheet">
-                 <string notr="true">background-color: rgb(255, 255, 255);</string>
-                </property>
-                <property name="text">
-                 <string>8192</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="labelLambda_3">
-                <property name="text">
-                 <string>Alpha Scale Factor:</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QLineEdit" name="alphaScaleInput">
-                <property name="maximumSize">
-                 <size>
-                  <width>100</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="styleSheet">
-                 <string notr="true">background-color: rgb(255, 255, 255);</string>
-                </property>
-                <property name="text">
-                 <string>0.5</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <widget class="QLabel" name="labelPi_3">
-                <property name="text">
-                 <string>Maximum Resolution (Pixels):</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
+              <property name="title">
+               <string>Select Graph Type</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_14">
+               <item>
+                <widget class="QRadioButton" name="radio2dOriginal">
+                 <property name="text">
+                  <string>Original</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QRadioButton" name="radio2dClusters">
+                 <property name="text">
+                  <string>With Clusters</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
             </item>
             <item>
              <widget class="QPushButton" name="graph2dButton">
@@ -1029,7 +1009,7 @@ background-color: rgb(240, 240, 240);</string>
     </layout>
    </widget>
   </widget>
-  <widget class="QDockWidget" name="dockWidget_2">
+  <widget class="QDockWidget" name="resultDock">
    <property name="floating">
     <bool>false</bool>
    </property>
@@ -1173,6 +1153,11 @@ background-color: rgb(240, 240, 240);</string>
   <action name="actionLoadLocalization">
    <property name="text">
     <string>Load Localization Data</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About</string>
    </property>
   </action>
  </widget>
