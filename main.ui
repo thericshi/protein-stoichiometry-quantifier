@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>800</width>
-    <height>566</height>
+    <height>581</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -379,7 +379,7 @@
      <item>
       <widget class="QStackedWidget" name="confStack">
        <property name="currentIndex">
-        <number>1</number>
+        <number>0</number>
        </property>
        <widget class="QWidget" name="blinkingConf">
         <layout class="QHBoxLayout" name="horizontalLayout_4">
@@ -413,6 +413,9 @@ background-color: rgb(240, 240, 240);</string>
             </property>
             <item>
              <layout class="QVBoxLayout" name="paramLayout">
+              <property name="spacing">
+               <number>2</number>
+              </property>
               <property name="sizeConstraint">
                <enum>QLayout::SetDefaultConstraint</enum>
               </property>
@@ -468,7 +471,7 @@ background-color: rgb(240, 240, 240);</string>
                 <property name="sizeHint" stdset="0">
                  <size>
                   <width>230</width>
-                  <height>10</height>
+                  <height>8</height>
                  </size>
                 </property>
                </spacer>
@@ -503,6 +506,9 @@ background-color: rgb(240, 240, 240);</string>
                 <layout class="QVBoxLayout" name="verticalLayout_2">
                  <item>
                   <widget class="QRadioButton" name="radioEM1">
+                   <property name="toolTip">
+                    <string>Assumes the data contains monomers only.</string>
+                   </property>
                    <property name="text">
                     <string>Monomer</string>
                    </property>
@@ -510,6 +516,9 @@ background-color: rgb(240, 240, 240);</string>
                  </item>
                  <item>
                   <widget class="QRadioButton" name="radioEM2">
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Assumes the data contains monomers and dimers.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
                    <property name="text">
                     <string>Monomer/Dimer</string>
                    </property>
@@ -517,6 +526,9 @@ background-color: rgb(240, 240, 240);</string>
                  </item>
                  <item>
                   <widget class="QRadioButton" name="radioEM3">
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Assumes the data contains monomers, dimers and trimers.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
                    <property name="text">
                     <string>Monomer/Dimer/Trimer</string>
                    </property>
@@ -536,7 +548,7 @@ background-color: rgb(240, 240, 240);</string>
                 <property name="sizeHint" stdset="0">
                  <size>
                   <width>230</width>
-                  <height>10</height>
+                  <height>8</height>
                  </size>
                 </property>
                </spacer>
@@ -561,6 +573,9 @@ background-color: rgb(240, 240, 240);</string>
                 </property>
                 <item row="0" column="0">
                  <widget class="QLabel" name="labelPi">
+                  <property name="toolTip">
+                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Starting guesses for the proportions of each protein complex type. This only affects the speed at which the algorithm converges; the results will not be affected. Leave this at the default values if unsure.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  </property>
                   <property name="text">
                    <string>Initial Pi (comma-separated):</string>
                   </property>
@@ -581,6 +596,9 @@ background-color: rgb(240, 240, 240);</string>
                 </item>
                 <item row="1" column="0">
                  <widget class="QLabel" name="labelLambda">
+                  <property name="toolTip">
+                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Initial estimate for the average number of blinks per molecule. This only affects the speed at which the algorithm converges; the results will not be affected. Leave this at the default value if unsure.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  </property>
                   <property name="text">
                    <string>Initial Lambda:</string>
                   </property>
@@ -601,6 +619,9 @@ background-color: rgb(240, 240, 240);</string>
                 </item>
                 <item row="2" column="0">
                  <widget class="QLabel" name="label_6">
+                  <property name="toolTip">
+                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Accounts for how well the labeling process worked. Entering the probability of successful labelling here can improve accuracy. If unknown, leave it at 1, which assumes perfect efficiency.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  </property>
                   <property name="text">
                    <string>Labelling Efficiency Factor:</string>
                   </property>
@@ -629,7 +650,7 @@ background-color: rgb(240, 240, 240);</string>
                 <property name="sizeHint" stdset="0">
                  <size>
                   <width>40</width>
-                  <height>10</height>
+                  <height>8</height>
                  </size>
                 </property>
                </spacer>
@@ -645,6 +666,9 @@ background-color: rgb(240, 240, 240);</string>
                <layout class="QFormLayout" name="bootstrappingForm">
                 <item row="0" column="0">
                  <widget class="QLabel" name="label_8">
+                  <property name="toolTip">
+                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The number of times the algorithm will repeat on slightly different versions of the data (if subset size factor is not set to 1). More replicates give a better estimate of the variability in the results.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  </property>
                   <property name="text">
                    <string>Replicates:</string>
                   </property>
@@ -662,6 +686,9 @@ background-color: rgb(240, 240, 240);</string>
                 </item>
                 <item row="1" column="0">
                  <widget class="QLabel" name="label_9">
+                  <property name="toolTip">
+                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The fraction of the original data that is used for each replicate. A smaller fraction makes the analysis faster but may be less accurate.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  </property>
                   <property name="text">
                    <string>Subset Size Factor:</string>
                   </property>
@@ -730,6 +757,9 @@ background-color: rgb(240, 240, 240);</string>
 background-color: rgb(240, 240, 240);</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_12">
+            <property name="spacing">
+             <number>2</number>
+            </property>
             <item>
              <widget class="QLabel" name="label_5">
               <property name="maximumSize">
@@ -770,7 +800,7 @@ background-color: rgb(240, 240, 240);</string>
               <property name="sizeHint" stdset="0">
                <size>
                 <width>230</width>
-                <height>10</height>
+                <height>8</height>
                </size>
               </property>
              </spacer>
@@ -795,6 +825,9 @@ background-color: rgb(240, 240, 240);</string>
               </property>
               <item row="0" column="0">
                <widget class="QLabel" name="labelPi_2">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The minimum distance for two localizations to be considered part of the same cluster or blink.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
                 <property name="text">
                  <string>Intermolecular Distance (nm):</string>
                 </property>
@@ -818,6 +851,9 @@ background-color: rgb(240, 240, 240);</string>
               </item>
               <item row="1" column="0">
                <widget class="QLabel" name="labelLambda_2">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The minimum number of localizations required to form a cluster or a blink.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
                 <property name="text">
                  <string>Minimum Cluster Samples:</string>
                 </property>
@@ -851,6 +887,9 @@ background-color: rgb(240, 240, 240);</string>
               </item>
               <item row="2" column="0">
                <widget class="QLabel" name="label_13">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Specifies how close in time localizations need to be to be grouped into the same blink event.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
                 <property name="text">
                  <string>Temporal Proximity (Frames):</string>
                 </property>
@@ -865,6 +904,9 @@ background-color: rgb(240, 240, 240);</string>
                 <width>230</width>
                 <height>16777215</height>
                </size>
+              </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Run the clustering algorithm and save the result to a csv file in the same directory. Each value of the file represents the number of blinks observed in a cluster.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="styleSheet">
                <string notr="true">background-color: rgb(255, 255, 255);</string>
@@ -882,7 +924,7 @@ background-color: rgb(240, 240, 240);</string>
               <property name="sizeHint" stdset="0">
                <size>
                 <width>231</width>
-                <height>10</height>
+                <height>8</height>
                </size>
               </property>
              </spacer>
@@ -911,6 +953,9 @@ background-color: rgb(240, 240, 240);</string>
               <layout class="QVBoxLayout" name="verticalLayout_8">
                <item>
                 <widget class="QRadioButton" name="radioOriginal">
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Plots the unprocessed localizations in 3D.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
                  <property name="text">
                   <string>Original</string>
                  </property>
@@ -918,6 +963,9 @@ background-color: rgb(240, 240, 240);</string>
                </item>
                <item>
                 <widget class="QRadioButton" name="radioSpatial">
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Plots the localizations in 3D with clusters based on their x and y positions only.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
                  <property name="text">
                   <string>Spatial Clusters</string>
                  </property>
@@ -925,6 +973,9 @@ background-color: rgb(240, 240, 240);</string>
                </item>
                <item>
                 <widget class="QRadioButton" name="radioTemporal">
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Plots the localizations in 3D with clusters based on both x and y positions and time. Each cluster represents one individual blink.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
                  <property name="text">
                   <string>Temporal Clusters</string>
                  </property>
@@ -951,7 +1002,7 @@ background-color: rgb(240, 240, 240);</string>
               <property name="sizeHint" stdset="0">
                <size>
                 <width>40</width>
-                <height>10</height>
+                <height>8</height>
                </size>
               </property>
              </spacer>
@@ -974,6 +1025,9 @@ background-color: rgb(240, 240, 240);</string>
               <layout class="QVBoxLayout" name="verticalLayout_14">
                <item>
                 <widget class="QRadioButton" name="radio2dOriginal">
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Creates a 2D Gaussian graph directly from the unprocessed data.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
                  <property name="text">
                   <string>Original</string>
                  </property>
@@ -981,6 +1035,9 @@ background-color: rgb(240, 240, 240);</string>
                </item>
                <item>
                 <widget class="QRadioButton" name="radio2dClusters">
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Generates a 2D Gaussian graph with clusters represented by colours.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
                  <property name="text">
                   <string>With Clusters</string>
                  </property>
