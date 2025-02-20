@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QDialog, QPushButton, QApplication, QLabel, QMainWin
 from PyQt6 import uic
 from PyQt6.QtCore import QThread, pyqtSignal, QMetaObject
 from PyQt6 import QtCore
-from PyQt6.QtGui import QGuiApplication
+from PyQt6.QtGui import QGuiApplication, QDoubleValidator
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
 from MixtureModelAlgorithm import EM1, EM2, EM3  # Import from the original script
@@ -39,7 +39,7 @@ class AboutDialog(QDialog):
         info_label = QLabel(
             "Protein Stoichiometry Quantifier\n\n"
             "Date: 2024-11\n"
-            "Developed by: Eric Shi in the Milstein Lab\n"
+            "Developed by: Eric Shi in the Milstein Lab, University of Toronto\n"
             "This program utilizes algorithms developed by:\n"
             "Artittaya Boonkird, Daniel F Nino and Joshua N Milstein in the Milstein Lab: https://doi.org/10.1093/bioadv/vbab032 for the prediction of protein stoichiometry\n"
             "Ulrike Endesfelder, Sebastian Malkusch, Franziska Fricke and Mike Heilemann: https://pubmed.ncbi.nlm.nih.gov/24522395/ for the estimation of localization precision\n"
@@ -79,7 +79,7 @@ class DataHandler:
                 self.main_window.blinking_data = self.blinking_data 
                 self.main_window.blinking_data_imported = self.blinking_data_imported
                 self.main_window.stoichiometry_clicked(None)  # Switch tabs
-            except Exception as e:  
+            except Exception as e:
                 self.main_window.blinkingFilePathLabel.setText(f"Error loading file: {e}")
                 self.blinking_data_imported = False  # Set to False if loading fails
                 self.blinking_data = None
@@ -104,16 +104,8 @@ class DataHandler:
                 self.main_window.localization_data = self.localization_data 
                 self.main_window.localization_data_imported = self.localization_data_imported
 
-                p, e = Loc_Acc(self.localization_data)
-                self.local_precision = p
-                self.local_precision_error = e
-                self.main_window.local_precision = self.local_precision
-
-                item = QListWidgetItem(f"{p:.2f}±({e:.2f})")
-                self.main_window.valueListWidget.insertItem(1, item)
-                self.main_window.preprocessing_clicked(None)  # Switch tabs
-
             except Exception as ex:
+                print(ex)
                 self.main_window.localizationFilePathLabel.setText(f"Error: {ex}")
                 self.localization_data_imported = False
                 self.localization_data = None
@@ -125,6 +117,20 @@ class DataHandler:
                 item = QListWidgetItem(f"Error in Localization processing")
                 self.main_window.valueListWidget.insertItem(1, item)  # Update list widget
                 return
+
+            try:
+                p, e = Loc_Acc(self.localization_data)
+                self.local_precision = p
+                self.local_precision_error = e
+                self.main_window.local_precision = self.local_precision
+
+                item = QListWidgetItem(f"{p:.2f}±({e:.2f})")
+                self.main_window.valueListWidget.insertItem(1, item)
+                self.main_window.preprocessing_clicked(None)  # Switch tabs
+            except Exception as exc:
+                item = QListWidgetItem(f"Optimal parameter not found")
+                self.main_window.valueListWidget.insertItem(1, item)
+                self.main_window.preprocessing_clicked(None)  # Switch tabs
 
         elif self.localization_data_imported: # Keep the previous data if the user cancels the file dialog and data was already loaded
              pass
@@ -149,20 +155,11 @@ class EMAlgorithmExecution(QThread):
 
     def run(self):  # Override the run method (this is what the thread executes)
 
-        pi_input = self.main_window.inputPi.text()
-        lambda_input = self.main_window.inputLambda.text()
         theta_input = self.main_window.inputTheta.text()
 
         self.main_window.replicates = int(self.main_window.replicatesInput.text())
         self.main_window.subset_factor = float(self.main_window.subsetSizeInput.text())
 
-        try:
-            pi = [float(x) for x in pi_input.split(',')] if pi_input else None
-        except ValueError:
-            self.main_window.show_popup("Invalid input", "Please enter the values in a comma-separated format")
-            return
-
-        lam = float(lambda_input) if lambda_input else None
         theta = float(theta_input) if theta_input else None
 
         self.lab_ineff = True if theta else False
@@ -173,11 +170,8 @@ class EMAlgorithmExecution(QThread):
             self.model = m
         elif self.main_window.radioEM2.isChecked():
             self.model = d
-        elif self.main_window.radioEM3.isChecked():
-            self.model = t
         else:
-            self.main_window.show_popup("Missing algorithm", "Please select an algorithm")
-            return
+            self.model = t
 
         pi_replicates, lam_replicates, aic_replicates = self._get_replicates(self.model, theta) # Pass self.model
 
@@ -252,10 +246,14 @@ class MainWindow(QMainWindow):
 
         uic.loadUi(ui_path, self)  # Load the UI file
 
+        positive_validator = QDoubleValidator()
+        positive_validator.setRange(0.0, float('inf'))
+        positive_validator.setDecimals(3)
+
         self.initialize_connections()
 
-        self.inputLambda.setText("0")
         self.inputTheta.setText("1")
+        self.inputTheta.setValidator(positive_validator)
 
         self.preprocessing_clicked(None)
 
@@ -332,9 +330,6 @@ class MainWindow(QMainWindow):
         self.actionGraph_Dataset.triggered.connect(self.plot_dataset)
         self.actionAbout.triggered.connect(self.show_about_dialog)
 
-        self.radioEM1.clicked.connect(self.set_default_pi)
-        self.radioEM2.clicked.connect(self.set_default_pi)
-        self.radioEM3.clicked.connect(self.set_default_pi)
         self.graph2dButton.clicked.connect(self.graph_2d_gaussian)
 
         self.preprocessingSwitch.mousePressEvent = self.preprocessing_clicked
@@ -394,14 +389,6 @@ class MainWindow(QMainWindow):
 
     def load_localization(self):
         self.data_handler.load_localization()
-
-    def set_default_pi(self):
-        if self.radioEM1.isChecked():
-            self.inputPi.setText("0")
-        elif self.radioEM2.isChecked():
-            self.inputPi.setText("0,0")
-        else:
-            self.inputPi.setText("0,0,0")
     
     def run_blink_extraction(self):
         if not self.localization_data_imported:
