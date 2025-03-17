@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import math
 
-from PyQt6.QtWidgets import QDialog, QPushButton, QApplication, QLabel, QMainWindow, QFileDialog, QTableWidgetItem, QMessageBox, QWidget, QVBoxLayout, QListWidgetItem, QDockWidget, QStatusBar, QProgressBar
+from PyQt6.QtWidgets import QDialog, QPushButton, QApplication, QLabel, QMainWindow, QFileDialog, QTableWidgetItem, QMessageBox, QWidget, QVBoxLayout, QListWidgetItem, QDockWidget, QStatusBar, QProgressBar, QHBoxLayout, QLineEdit
 
 from PyQt6 import uic
 from PyQt6.QtCore import QThread, pyqtSignal, QMetaObject
@@ -21,6 +21,8 @@ from PyVistaPlotter import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+import plotly.io as pio
 
 os.environ["TRAITSUI_TOOLKIT"] = "qt"
 os.environ["ETS_TOOLKIT"] = "qt"
@@ -55,6 +57,42 @@ class AboutDialog(QDialog):
         layout.addWidget(close_button)
 
         self.setLayout(layout)
+
+
+class ModifyAttributesDialog(QDialog):
+    def __init__(self, parent=None):
+        super(ModifyAttributesDialog, self).__init__(parent)
+        self.setWindowTitle("Modify Default Attributes")
+        
+        # Layout
+        layout = QVBoxLayout()
+        
+        # Create input field for max_iter
+        max_iter_layout = QHBoxLayout()
+        max_iter_label = QLabel("Maximum Iterations:")
+        self.max_iter_input = QLineEdit()
+        self.max_iter_input.setText("50000")  # Default value
+        max_iter_layout.addWidget(max_iter_label)
+        max_iter_layout.addWidget(self.max_iter_input)
+        layout.addLayout(max_iter_layout)
+        
+        # Add some spacing
+        layout.addSpacing(20)
+        
+        # Add OK and Cancel buttons
+        button_layout = QHBoxLayout()
+        ok_button = QPushButton("OK")
+        cancel_button = QPushButton("Cancel")
+        ok_button.clicked.connect(self.accept)
+        cancel_button.clicked.connect(self.reject)
+        button_layout.addWidget(ok_button)
+        button_layout.addWidget(cancel_button)
+        layout.addLayout(button_layout)
+        
+        self.setLayout(layout)
+
+    def get_max_iter(self):
+        return int(self.max_iter_input.text())
 
 
 class DataHandler:
@@ -97,54 +135,82 @@ class DataHandler:
         file_path, _ = file_dialog.getOpenFileName(self.main_window, "Open Data File", "", "Text Files (*.txt)")
 
         if file_path:
-            self.main_window.localizationFilePathLabel.setText(f"Loaded Localization Dataset: {file_path}") 
             try:
+                # First try to read the file to validate format
+                with open(file_path, 'r') as f:
+                    # Skip header line
+                    header = f.readline()
+                    # Read first few lines to validate format
+                    first_line = f.readline().strip()
+                    if not first_line:
+                        raise ValueError("File is empty after header")
+                    
+                    # Split the line and validate number of columns
+                    columns = first_line.split()
+                    if len(columns) < 4:
+                        raise ValueError("File must have at least 4 columns")
+                    
+                    # Validate data types
+                    try:
+                        float(columns[0])  # First column should be float/int
+                        float(columns[1])  # Second column should be float/int
+                        int(columns[2])    # Third column should be integer
+                        float(columns[3])  # Fourth column should be float/int
+                    except ValueError as e:
+                        raise ValueError("Invalid data types in columns. Expected: float/int, float/int, int, float/int")
+
+                # If validation passes, load the file
                 self.localization_data = pd.read_csv(file_path, delimiter=' ', header=1)
                 self.localization_data_imported = True
                 self.main_window.localization_data = self.localization_data 
                 self.main_window.localization_data_imported = self.localization_data_imported
+                self.main_window.localizationFilePathLabel.setText(f"Loaded Localization Dataset: {file_path}")
+
+                try:
+                    p, e = Loc_Acc(self.localization_data)
+                    self.local_precision = p
+                    self.local_precision_error = e
+                    self.main_window.local_precision = self.local_precision
+
+                    item = QListWidgetItem(f"{p:.2f}±({e:.2f})")
+                    self.main_window.valueListWidget.insertItem(1, item)
+                    self.main_window.preprocessing_clicked(None)  # Switch tabs
+                except Exception as exc:
+                    item = QListWidgetItem(f"Optimal parameter not found")
+                    self.main_window.valueListWidget.insertItem(1, item)
+                    self.main_window.preprocessing_clicked(None)  # Switch tabs
 
             except Exception as ex:
-                print(ex)
-                self.main_window.localizationFilePathLabel.setText(f"Error: {ex}")
+                self.main_window.show_popup("Invalid File Format", 
+                    "The file must be space-separated with the following format:\n"
+                    "- First column (x-position): float or integer\n"
+                    "- Second column (y-position): float or integer\n"
+                    "- Third column (frame number): integer\n"
+                    "- Fourth column (intensity): float or integer\n"
+                    f"\nError: {str(ex)}")
                 self.localization_data_imported = False
                 self.localization_data = None
                 self.local_precision = -1
                 self.local_precision_error = None
-                self.main_window.localization_data = self.localization_data  # Update MainWindow variable
+                self.main_window.localization_data = self.localization_data
                 self.main_window.localization_data_imported = self.localization_data_imported
-                self.main_window.local_precision = self.local_precision # Update MainWindow variable
-                item = QListWidgetItem(f"Error in Localization processing")
-                self.main_window.valueListWidget.insertItem(1, item)  # Update list widget
-                return
-
-            try:
-                p, e = Loc_Acc(self.localization_data)
-                self.local_precision = p
-                self.local_precision_error = e
                 self.main_window.local_precision = self.local_precision
+                self.main_window.localizationFilePathLabel.setText("No file loaded")
 
-                item = QListWidgetItem(f"{p:.2f}±({e:.2f})")
-                self.main_window.valueListWidget.insertItem(1, item)
-                self.main_window.preprocessing_clicked(None)  # Switch tabs
-            except Exception as exc:
-                item = QListWidgetItem(f"Optimal parameter not found")
-                self.main_window.valueListWidget.insertItem(1, item)
-                self.main_window.preprocessing_clicked(None)  # Switch tabs
-
-        elif self.localization_data_imported: # Keep the previous data if the user cancels the file dialog and data was already loaded
-             pass
+        elif self.localization_data_imported:  # Keep the previous data if the user cancels the file dialog and data was already loaded
+            pass
         else:
             self.main_window.localizationFilePathLabel.setText("No file loaded")
             self.local_precision = -1  # Reset if no file is loaded
             self.local_precision_error = None
-            self.main_window.local_precision = self.local_precision # Update MainWindow variable
+            self.main_window.local_precision = self.local_precision
 
 
 class EMAlgorithmExecution(QThread):
     finished_signal = pyqtSignal(object, object, object, object, object, object)  # Signal for results
     progress_update = pyqtSignal(int)  # Signal for progress updates
     cancelled_signal = pyqtSignal()  # Signal for cancellation
+    max_iter_error_signal = pyqtSignal(str, str)  # Signal for max iterations error (title, message)
 
     def __init__(self, main_window):
         super().__init__()
@@ -152,9 +218,10 @@ class EMAlgorithmExecution(QThread):
         self.lab_ineff = False
         self.model = None
         self.is_cancelled = False  # Flag to track cancellation
+        # Connect the max_iter_error_signal to the show_popup method
+        self.max_iter_error_signal.connect(self.main_window.show_popup)
 
     def run(self):  # Override the run method (this is what the thread executes)
-
         theta_input = self.main_window.inputTheta.text()
 
         self.main_window.replicates = int(self.main_window.replicatesInput.text())
@@ -175,6 +242,11 @@ class EMAlgorithmExecution(QThread):
 
         pi_replicates, lam_replicates, aic_replicates = self._get_replicates(self.model, theta) # Pass self.model
 
+        # If we got empty results (max iterations exceeded), emit empty results
+        if not pi_replicates or not lam_replicates or not aic_replicates:
+            self.finished_signal.emit(None, None, None, None, None, self.model)
+            return
+
         transposed_pi = list(zip(*pi_replicates))
         transposed_lam = lam_replicates
         transposed_aic = aic_replicates
@@ -187,7 +259,7 @@ class EMAlgorithmExecution(QThread):
         lam_std = np.std(transposed_lam)
 
         # Emit the signal with the results:
-        self.finished_signal.emit(lam_means, pi_means, aic_means, pi_stds, lam_std, self.model) 
+        self.finished_signal.emit(lam_means, pi_means, aic_means, pi_stds, lam_std, self.model)
 
     def _get_replicates(self, model, theta):
         bootstrapped_data = self._bootstrap_dataset(self.main_window.replicates, self.main_window.subset_factor)
@@ -200,33 +272,41 @@ class EMAlgorithmExecution(QThread):
             if self.is_cancelled:  # Check cancellation flag in the loop
                 self.cancelled_signal.emit()  # Emit cancellation signal
                 return [], [], []  # Return empty lists to stop further processing
-            if model == "M":
-                em1 = EM1(dataset)
-                em1.initialize()
-                em1.run()
-                pi_replicates.append(em1.pi)
-                lam_replicates.append(em1.lam)
-                aic_replicates.append(em1.AIC)
-            elif model == "M/D":
-                em2 = EM2(dataset)
-                em2.initialize()
-                em2.run()
-                if self.lab_ineff:
-                    em2.theta = theta
-                    em2.apply_lab_ineff()
-                pi_replicates.append(em2.pi)
-                lam_replicates.append(em2.lam)
-                aic_replicates.append(em2.AIC)
-            else:  # model == "M/D/T"
-                em3 = EM3(dataset)
-                em3.initialize()
-                em3.run()
-                if self.lab_ineff:
-                    em3.theta = theta
-                    em3.apply_lab_ineff()
-                pi_replicates.append(em3.pi)
-                lam_replicates.append(em3.lam)
-                aic_replicates.append(em3.AIC)
+            try:
+                if model == "M":
+                    em1 = EM1(dataset)
+                    em1.initialize()
+                    em1.run(max_iter=self.main_window.max_iter)
+                    pi_replicates.append(em1.pi)
+                    lam_replicates.append(em1.lam)
+                    aic_replicates.append(em1.AIC)
+                elif model == "M/D":
+                    em2 = EM2(dataset)
+                    em2.initialize()
+                    em2.run(max_iter=self.main_window.max_iter)
+                    if self.lab_ineff:
+                        em2.theta = theta
+                        em2.apply_lab_ineff()
+                    pi_replicates.append(em2.pi)
+                    lam_replicates.append(em2.lam)
+                    aic_replicates.append(em2.AIC)
+                else:  # model == "M/D/T"
+                    em3 = EM3(dataset)
+                    em3.initialize()
+                    em3.run(max_iter=self.main_window.max_iter)
+                    if self.lab_ineff:
+                        em3.theta = theta
+                        em3.apply_lab_ineff()
+                    pi_replicates.append(em3.pi)
+                    lam_replicates.append(em3.lam)
+                    aic_replicates.append(em3.AIC)
+            except RuntimeError as e:
+                if "Maximum iterations" in str(e):
+                    self.max_iter_error_signal.emit(
+                        "Maximum Iterations Exceeded",
+                        f"The EM algorithm exceeded the maximum number of iterations ({self.main_window.max_iter}). This can be modified in the settings menu."
+                    )
+                    return [], [], []  # Return empty lists to stop further processing
 
             progress_percentage = int(round((i + 1) / len(bootstrapped_data) * 100))
             self.progress_update.emit(progress_percentage)  # Emit the progress update signal
@@ -267,6 +347,7 @@ class MainWindow(QMainWindow):
         self.replicates = 1
         self.subset_factor = 1
         self.local_precision = -1
+        self.max_iter = 50000  # Default value for max iterations
 
         self.initialize_stoichiometry_graph()
         self.initialize_blinking_graph()
@@ -329,6 +410,7 @@ class MainWindow(QMainWindow):
         self.actionLoadLocalization.triggered.connect(self.load_localization)
         self.actionGraph_Dataset.triggered.connect(self.plot_dataset)
         self.actionAbout.triggered.connect(self.show_about_dialog)
+        self.actionModify_Attributes.triggered.connect(self.show_modify_attributes_dialog)
 
         self.graph2dButton.clicked.connect(self.graph_2d_gaussian)
 
@@ -430,7 +512,7 @@ class MainWindow(QMainWindow):
         self.tableWidget.insertRow(row_position)
 
         # Add Result Values to the new row
-        item = QTableWidgetItem(str(round(pi[0]*100, 1)) + "(±" + str(round(pi_std[0]*100, 2)) + ")")
+        item = QTableWidgetItem(str(round(pi[0]*100, 1)))
         # Make the item non-editable
         # item.setFlags(item.flags() & ~Qt.ItemIsEditable)
         self.tableWidget.setItem(row_position, 0, item)
@@ -438,16 +520,16 @@ class MainWindow(QMainWindow):
         if model == "M":
             item = QTableWidgetItem(str("N/A"))            
         else:
-            item = QTableWidgetItem(str(round(pi[1]*100, 1)) + "(±" + str(round(pi_std[1]*100, 2)) + ")")
+            item = QTableWidgetItem(str(round(pi[1]*100, 1)))
         self.tableWidget.setItem(row_position, 1, item)
 
         if model != "M/D/T":
             item = QTableWidgetItem(str("N/A"))
         else:
-            item = QTableWidgetItem(str(round(pi[2]*100, 1)) + "(±" + str(round(pi_std[2]*100, 2)) + ")")
+            item = QTableWidgetItem(str(round(pi[2]*100, 1)))
         self.tableWidget.setItem(row_position, 2, item)
 
-        item = QTableWidgetItem(str(round(lam, 2)) + "(±" + str(round(lam_std, 2)) + ")")
+        item = QTableWidgetItem(str(round(lam, 2)))
         self.tableWidget.setItem(row_position, 3, item)
 
         item = QTableWidgetItem(str(round(AIC, 2)))
@@ -519,6 +601,11 @@ class MainWindow(QMainWindow):
                 self.analyzer.plot_original_gaussian(self.local_precision, alpha_scale=alpha_scale, intensity_scale=0.3, min_alpha=0.05, max_res=max_res)
             elif self.radio2dClusters.isChecked():
                 self.analyzer.plot_gaussian_clusters(self.local_precision, alpha_scale=alpha_scale, intensity_scale=0.3, min_alpha=0.05, max_res=max_res)
+            elif self.radio2dPoints.isChecked():
+                if not self.analyzer.all_temporal_clusters:
+                    self.show_popup("No Data", "Please run the extraction algorithm first.")
+                    return
+                plot_2d_points_clusters(self.analyzer.all_temporal_clusters, self.localization_data)
 
     def run_replicates(self):
         if self.blinking_data is None:
@@ -556,6 +643,11 @@ class MainWindow(QMainWindow):
         if self.em_thread.is_cancelled:
             self.em_thread.is_cancelled = False
             return
+            
+        # Check if we have empty results (which happens when max iterations is exceeded)
+        if not pi_means or not pi_stds:
+            return  # Just return without trying to display or plot results
+            
         self.display_results(lam_means, pi_means, aic_means, pi_stds, lam_std, model)
         self.plot_stoichiometry(pi_means, pi_stds, model)
         self.runEMButton.setEnabled(True)
@@ -568,6 +660,14 @@ class MainWindow(QMainWindow):
 
     def cancel_em_algorithm(self):
         self.em_thread.cancel()
+
+    def show_modify_attributes_dialog(self):
+        """Display the Modify Attributes dialog."""
+        dialog = ModifyAttributesDialog(self)
+        dialog.max_iter_input.setText(str(self.max_iter))  # Set current value
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.max_iter = dialog.get_max_iter()
+            self.show_popup("Settings Updated", f"Maximum iterations has been set to {self.max_iter}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
