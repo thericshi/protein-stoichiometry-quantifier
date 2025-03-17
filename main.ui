@@ -349,9 +349,16 @@
     </property>
     <addaction name="actionAbout"/>
    </widget>
+   <widget class="QMenu" name="menuSettings">
+    <property name="title">
+     <string>Settings</string>
+    </property>
+    <addaction name="actionModify_Attributes"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuGraph"/>
    <addaction name="menuHelp"/>
+   <addaction name="menuSettings"/>
   </widget>
   <widget class="QDockWidget" name="confDock">
    <property name="minimumSize">
@@ -383,7 +390,7 @@
      <item>
       <widget class="QStackedWidget" name="confStack">
        <property name="currentIndex">
-        <number>0</number>
+        <number>1</number>
        </property>
        <widget class="QWidget" name="blinkingConf">
         <layout class="QHBoxLayout" name="horizontalLayout_4">
@@ -987,7 +994,7 @@ background-color: rgb(240, 240, 240);</string>
                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Creates a 2D Gaussian graph directly from the unprocessed data.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                  <property name="text">
-                  <string>Original</string>
+                  <string>Gaussian Original</string>
                  </property>
                 </widget>
                </item>
@@ -997,7 +1004,17 @@ background-color: rgb(240, 240, 240);</string>
                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Generates a 2D Gaussian graph with clusters represented by colours.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                  <property name="text">
-                  <string>With Clusters</string>
+                  <string>Gaussian With Clusters</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QRadioButton" name="radio2dPoints">
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Generates a 2D non-gaussian points plotly graph with clusters represented by colours (suitable for large datasets). The plot will be displayed on the default browser.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="text">
+                  <string>Points With Clusters</string>
                  </property>
                 </widget>
                </item>
@@ -1173,6 +1190,11 @@ background-color: rgb(240, 240, 240);</string>
   <action name="actionAbout">
    <property name="text">
     <string>About</string>
+   </property>
+  </action>
+  <action name="actionModify_Attributes">
+   <property name="text">
+    <string>Modify Default Attributes</string>
    </property>
   </action>
  </widget>
