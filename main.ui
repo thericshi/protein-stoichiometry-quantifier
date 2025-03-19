@@ -390,7 +390,7 @@
      <item>
       <widget class="QStackedWidget" name="confStack">
        <property name="currentIndex">
-        <number>1</number>
+        <number>0</number>
        </property>
        <widget class="QWidget" name="blinkingConf">
         <layout class="QHBoxLayout" name="horizontalLayout_4">
@@ -447,7 +447,7 @@ background-color: rgb(240, 240, 240);</string>
                 <property name="maximumSize">
                  <size>
                   <width>200</width>
-                  <height>16777215</height>
+                  <height>1666666</height>
                  </size>
                 </property>
                 <property name="styleSheet">
@@ -463,7 +463,7 @@ background-color: rgb(240, 240, 240);</string>
                 <property name="maximumSize">
                  <size>
                   <width>230</width>
-                  <height>16777215</height>
+                  <height>15</height>
                  </size>
                 </property>
                 <property name="text">
@@ -615,7 +615,7 @@ background-color: rgb(240, 240, 240);</string>
                 <property name="sizeHint" stdset="0">
                  <size>
                   <width>40</width>
-                  <height>8</height>
+                  <height>4</height>
                  </size>
                 </property>
                </spacer>
@@ -730,7 +730,7 @@ background-color: rgb(240, 240, 240);</string>
               <property name="maximumSize">
                <size>
                 <width>200</width>
-                <height>16777215</height>
+                <height>15</height>
                </size>
               </property>
               <property name="styleSheet">
@@ -746,7 +746,7 @@ background-color: rgb(240, 240, 240);</string>
               <property name="maximumSize">
                <size>
                 <width>230</width>
-                <height>16777215</height>
+                <height>15</height>
                </size>
               </property>
               <property name="text">
@@ -765,7 +765,7 @@ background-color: rgb(240, 240, 240);</string>
               <property name="sizeHint" stdset="0">
                <size>
                 <width>230</width>
-                <height>8</height>
+                <height>10</height>
                </size>
               </property>
              </spacer>
@@ -863,23 +863,52 @@ background-color: rgb(240, 240, 240);</string>
              </layout>
             </item>
             <item>
-             <widget class="QPushButton" name="runExtractionButton">
-              <property name="maximumSize">
-               <size>
-                <width>230</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Run the clustering algorithm and save the result to a csv file in the same directory. Each value of the file represents the number of blinks observed in a cluster.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">background-color: rgb(255, 255, 255);</string>
-              </property>
-              <property name="text">
-               <string>Extract Blinking Data</string>
-              </property>
-             </widget>
+             <layout class="QHBoxLayout" name="horizontalLayout_5">
+              <item>
+               <widget class="QPushButton" name="runExtractionButton">
+                <property name="minimumSize">
+                 <size>
+                  <width>60</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>230</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Run the clustering algorithm and save the result to a csv file in the same directory. Each value of the file represents the number of blinks observed in a cluster.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">background-color: rgb(255, 255, 255);</string>
+                </property>
+                <property name="text">
+                 <string>Cluster Blinks</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton">
+                <property name="minimumSize">
+                 <size>
+                  <width>60</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Proceed to stoichiometry analysis with the extracted blink data.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">background-color: rgb(255, 255, 255);</string>
+                </property>
+                <property name="text">
+                 <string>Proceed</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </item>
             <item>
              <spacer name="horizontalSpacer_8">
@@ -889,7 +918,7 @@ background-color: rgb(240, 240, 240);</string>
               <property name="sizeHint" stdset="0">
                <size>
                 <width>231</width>
-                <height>8</height>
+                <height>10</height>
                </size>
               </property>
              </spacer>
@@ -967,7 +996,7 @@ background-color: rgb(240, 240, 240);</string>
               <property name="sizeHint" stdset="0">
                <size>
                 <width>40</width>
-                <height>8</height>
+                <height>10</height>
                </size>
               </property>
              </spacer>
