@@ -165,6 +165,10 @@ class DataHandler:
                 self.main_window.localization_data = self.localization_data 
                 self.main_window.localization_data_imported = self.localization_data_imported
                 self.main_window.localizationFilePathLabel.setText(f"Loaded Localization Dataset: {file_path}")
+                # Enable the Extract Blinks button
+                self.main_window.runExtractionButton.setEnabled(True)
+                # Disable the Proceed button until extraction is done
+                self.main_window.pushButton.setEnabled(False)
 
                 try:
                     p, e = Loc_Acc(self.localization_data)
@@ -196,6 +200,9 @@ class DataHandler:
                 self.main_window.localization_data_imported = self.localization_data_imported
                 self.main_window.local_precision = self.local_precision
                 self.main_window.localizationFilePathLabel.setText("No file loaded")
+                # Disable both buttons when data is invalid
+                self.main_window.runExtractionButton.setEnabled(False)
+                self.main_window.pushButton.setEnabled(False)
 
         elif self.localization_data_imported:  # Keep the previous data if the user cancels the file dialog and data was already loaded
             pass
@@ -204,6 +211,9 @@ class DataHandler:
             self.local_precision = -1  # Reset if no file is loaded
             self.local_precision_error = None
             self.main_window.local_precision = self.local_precision
+            # Disable both buttons when no data is loaded
+            self.main_window.runExtractionButton.setEnabled(False)
+            self.main_window.pushButton.setEnabled(False)
 
 
 class EMAlgorithmExecution(QThread):
@@ -337,6 +347,13 @@ class MainWindow(QMainWindow):
 
         self.preprocessing_clicked(None)
 
+        # Initially disable buttons
+        self.runExtractionButton.setEnabled(False)
+        self.pushButton.setEnabled(False)
+        self.graphButton.setEnabled(False)
+        self.graph2dButton.setEnabled(False)
+        self.runEMButton.setEnabled(False)
+
         self.blinking_data = None
         self.blinking_data_imported = False
         self.localization_data = None
@@ -404,6 +421,7 @@ class MainWindow(QMainWindow):
         self.runEMButton.clicked.connect(self.run_replicates)
         self.runExtractionButton.clicked.connect(self.run_blink_extraction)
         self.graphButton.clicked.connect(self.choose_graph)
+        self.pushButton.clicked.connect(self.proceed_to_stoichiometry)  # Add connection for proceed button
 
         # Connect Menu items to their functions
         self.actionLoadBlinking.triggered.connect(self.load_blinking)
@@ -468,10 +486,18 @@ class MainWindow(QMainWindow):
 
     def load_blinking(self):
         self.data_handler.load_blinking()
+        # Enable the EM button if data was loaded successfully
+        self.runEMButton.setEnabled(self.blinking_data_imported)
 
     def load_localization(self):
         self.data_handler.load_localization()
-    
+        # Enable/disable buttons based on data state
+        self.runExtractionButton.setEnabled(self.localization_data_imported)
+        # Both graph buttons should be disabled until extraction is done
+        self.graphButton.setEnabled(False)
+        self.graph2dButton.setEnabled(False)
+        self.pushButton.setEnabled(False)  # Disabled until extraction is done
+
     def run_blink_extraction(self):
         if not self.localization_data_imported:
             self.show_popup("Missing data", "Please load a localization file before running the extraction")
@@ -487,6 +513,11 @@ class MainWindow(QMainWindow):
         blinking_data = self.analyzer.get_blinking_data()
         self.display_blinking_data(blinking_data)
         self.plot_blinking(blinking_data)
+        
+        # Enable all buttons after successful extraction
+        self.pushButton.setEnabled(True)
+        self.graphButton.setEnabled(True)
+        self.graph2dButton.setEnabled(True)
 
     def choose_graph(self):
         if self.radioOriginal.isChecked():
@@ -668,6 +699,34 @@ class MainWindow(QMainWindow):
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.max_iter = dialog.get_max_iter()
             self.show_popup("Settings Updated", f"Maximum iterations has been set to {self.max_iter}")
+
+    def proceed_to_stoichiometry(self):
+        """Switch to stoichiometry tab and transfer the extracted blink data."""
+        if not self.analyzer or not self.analyzer.all_temporal_clusters:
+            self.show_popup("No Data", "Please run the extraction algorithm first.")
+            return
+            
+        # Get the blinking data
+        blinking_data = self.analyzer.get_blinking_data()
+        
+        # Save the blinking data to a CSV file
+        np.savetxt("exported_data.csv", blinking_data, delimiter=",")
+        
+        # Load the data into the blinking_data variable
+        self.blinking_data = np.array(blinking_data)
+        self.blinking_data_imported = True
+        
+        # Switch to stoichiometry tab
+        self.stoichiometry_clicked(None)
+        
+        # Update the file path label
+        self.blinkingFilePathLabel.setText("Loaded Blinking Dataset: exported_data.csv")
+        
+        # Enable the EM button since we now have data
+        self.runEMButton.setEnabled(True)
+        
+        # Show a success message
+        self.show_popup("Data Transferred", "Blink data has been successfully transferred to stoichiometry analysis.")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

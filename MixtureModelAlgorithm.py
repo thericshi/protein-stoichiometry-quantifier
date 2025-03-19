@@ -169,9 +169,14 @@ class EM3:
         # print('best lam = ',self.lam)
         # print('best pi = ',self.pi)
     
-    def run(self,conv_lv=10e-5):
-        while not abs(self.lam - self.pre_lam) <conv_lv:
-            self.EMstep() 
+    def run(self, conv_lv=10e-5, max_iter=50000):
+        """
+        Run the EM algorithm until convergence or maximum iterations reached
+        """
+        while not abs(self.lam - self.pre_lam) < conv_lv:
+            if self.iterations >= max_iter:
+                raise RuntimeError(f"Maximum iterations ({max_iter}) exceeded")
+            self.EMstep()
 
     def gamma(self):
         product = self.pi[2] * ((q(1, 1, self.theta) * (q(2, 2, self.theta) - q(2, 3, self.theta))) 
@@ -273,8 +278,13 @@ class EM2:
         # print('best lam = ', self.lam)
         # print('best pi = ', self.pi)
 
-    def run(self, conv_lv=10e-5):
+    def run(self, conv_lv=10e-5, max_iter=50000):
+        """
+        Run the EM algorithm until convergence or maximum iterations reached
+        """
         while not abs(self.lam - self.pre_lam) < conv_lv:
+            if self.iterations >= max_iter:
+                raise RuntimeError(f"Maximum iterations ({max_iter}) exceeded")
             self.EMstep()
 
     def apply_lab_ineff(self):
@@ -360,11 +370,13 @@ class EM1:
         print('best lam = ', self.lam)
         print('best pi = ', self.pi)
 
-    def run(self, conv_lv=10e-5):
+    def run(self, conv_lv=10e-5, max_iter=50000):
         """
-        Run the EM algorithm until convergence
+        Run the EM algorithm until convergence or maximum iterations reached
         """
         while not abs(self.lam - self.pre_lam) < conv_lv:
+            if self.iterations >= max_iter:
+                raise RuntimeError(f"Maximum iterations ({max_iter}) exceeded")
             self.EMstep()
             if self.status_callback:
                 self.status_callback(f"Lambda difference = {abs(self.lam - self.pre_lam):.6f}")
