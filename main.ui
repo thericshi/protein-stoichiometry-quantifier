@@ -289,6 +289,9 @@
                </property>
                <item>
                 <widget class="QWidget" name="blinkGraph" native="true">
+                 <property name="toolTip">
+                  <string/>
+                 </property>
                  <layout class="QVBoxLayout" name="verticalLayout_11">
                   <property name="spacing">
                    <number>0</number>
@@ -348,17 +351,11 @@
      <string>Help</string>
     </property>
     <addaction name="actionAbout"/>
-   </widget>
-   <widget class="QMenu" name="menuSettings">
-    <property name="title">
-     <string>Settings</string>
-    </property>
-    <addaction name="actionModify_Attributes"/>
+    <addaction name="actionUserGuide"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuGraph"/>
    <addaction name="menuHelp"/>
-   <addaction name="menuSettings"/>
   </widget>
   <widget class="QDockWidget" name="confDock">
    <property name="minimumSize">
@@ -390,7 +387,7 @@
      <item>
       <widget class="QStackedWidget" name="confStack">
        <property name="currentIndex">
-        <number>0</number>
+        <number>1</number>
        </property>
        <widget class="QWidget" name="blinkingConf">
         <layout class="QHBoxLayout" name="horizontalLayout_4">
@@ -606,6 +603,22 @@ background-color: rgb(240, 240, 240);</string>
                  </widget>
                 </item>
                </layout>
+              </item>
+              <item>
+               <widget class="QPushButton" name="maxIterButton">
+                <property name="maximumSize">
+                 <size>
+                  <width>200</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The maximum limit of iterations that the EM algorithm runs before terminating.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="text">
+                 <string>Modify Maximum Iteration Limit</string>
+                </property>
+               </widget>
               </item>
               <item>
                <spacer name="horizontalSpacer_3">
@@ -1018,16 +1031,6 @@ background-color: rgb(240, 240, 240);</string>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_14">
                <item>
-                <widget class="QRadioButton" name="radio2dOriginal">
-                 <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Creates a 2D Gaussian graph directly from the unprocessed data.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
-                 <property name="text">
-                  <string>Gaussian Original</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
                 <widget class="QRadioButton" name="radio2dClusters">
                  <property name="toolTip">
                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Generates a 2D Gaussian graph with clusters represented by colours.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -1224,6 +1227,11 @@ background-color: rgb(240, 240, 240);</string>
   <action name="actionModify_Attributes">
    <property name="text">
     <string>Modify Default Attributes</string>
+   </property>
+  </action>
+  <action name="actionUserGuide">
+   <property name="text">
+    <string>User Guide</string>
    </property>
   </action>
  </widget>

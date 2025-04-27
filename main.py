@@ -5,11 +5,10 @@ import numpy as np
 import pandas as pd
 import math
 
-from PyQt6.QtWidgets import QDialog, QPushButton, QApplication, QLabel, QMainWindow, QFileDialog, QTableWidgetItem, QMessageBox, QWidget, QVBoxLayout, QListWidgetItem, QDockWidget, QStatusBar, QProgressBar, QHBoxLayout, QLineEdit
+from PyQt6.QtWidgets import QDialog, QPushButton, QApplication, QLabel, QMainWindow, QFileDialog, QTableWidgetItem, QMessageBox, QWidget, QVBoxLayout, QListWidgetItem, QDockWidget, QStatusBar, QProgressBar, QHBoxLayout, QLineEdit, QTextBrowser
 
 from PyQt6 import uic
-from PyQt6.QtCore import QThread, pyqtSignal, QMetaObject
-from PyQt6 import QtCore
+from PyQt6.QtCore import QThread, QSize, pyqtSignal
 from PyQt6.QtGui import QGuiApplication, QDoubleValidator
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
@@ -21,11 +20,48 @@ from PyVistaPlotter import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
-import plotly.graph_objects as go
-import plotly.io as pio
+
 
 os.environ["TRAITSUI_TOOLKIT"] = "qt"
 os.environ["ETS_TOOLKIT"] = "qt"
+
+
+class HelpDialog(QDialog):
+    def __init__(self):
+        super(HelpDialog, self).__init__()
+
+        self.setWindowTitle("User Guide")
+        self.resize(QSize(650, 450))
+        # Layout
+        layout = QVBoxLayout()
+
+        # Program information using QTextBrowser
+        info_text_browser = QTextBrowser()
+
+        # Read HTML content from user_guide_html.txt in the same directory as the script
+        try:
+            script_dir = os.path.dirname(os.path.abspath(__file__))  # Get the script's directory
+            file_path = os.path.join(script_dir, "user_guide_html.txt")  # Construct the full file path
+
+            with open(file_path, "r", encoding="utf-8") as file:
+                html_content = file.read()
+            info_text_browser.setHtml(html_content)
+        except FileNotFoundError:
+            info_text_browser.setHtml("""
+                <h1>Error</h1>
+                <p>User guide file (user_guide_html.txt) not found in the script's directory.</p>
+            """)
+
+        info_text_browser.setOpenExternalLinks(True)  # Allow clickable links
+
+        layout.addWidget(info_text_browser)
+
+        # OK button to close the dialog
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.close)
+        layout.addWidget(close_button)
+
+        self.setLayout(layout)
 
 
 class AboutDialog(QDialog):
@@ -392,10 +428,15 @@ class MainWindow(QMainWindow):
         self.cancel_button.hide()
         self.cancel_button.clicked.connect(self.cancel_em_algorithm)
 
+    def show_help_dialog(self):
+        """Display the Help dialog."""
+        help_dialog = HelpDialog()
+        help_dialog.exec()  
+
     def show_about_dialog(self):
         """Display the About dialog."""
         about_dialog = AboutDialog()
-        about_dialog.exec()  # Show the dialog modally
+        about_dialog.exec()
     
     def set_window_size(self):
         # Get the primary screen's geometry
@@ -422,13 +463,14 @@ class MainWindow(QMainWindow):
         self.runExtractionButton.clicked.connect(self.run_blink_extraction)
         self.graphButton.clicked.connect(self.choose_graph)
         self.pushButton.clicked.connect(self.proceed_to_stoichiometry)  # Add connection for proceed button
+        self.maxIterButton.clicked.connect(self.show_modify_attributes_dialog)
 
         # Connect Menu items to their functions
         self.actionLoadBlinking.triggered.connect(self.load_blinking)
         self.actionLoadLocalization.triggered.connect(self.load_localization)
         self.actionGraph_Dataset.triggered.connect(self.plot_dataset)
         self.actionAbout.triggered.connect(self.show_about_dialog)
-        self.actionModify_Attributes.triggered.connect(self.show_modify_attributes_dialog)
+        self.actionUserGuide.triggered.connect(self.show_help_dialog)
 
         self.graph2dButton.clicked.connect(self.graph_2d_gaussian)
 
@@ -628,9 +670,8 @@ class MainWindow(QMainWindow):
         if self.analyzer:
             max_res = 8192
             alpha_scale = 0.8
-            if self.radio2dOriginal.isChecked():
-                self.analyzer.plot_original_gaussian(self.local_precision, alpha_scale=alpha_scale, intensity_scale=0.3, min_alpha=0.05, max_res=max_res)
-            elif self.radio2dClusters.isChecked():
+ 
+            if self.radio2dClusters.isChecked():
                 self.analyzer.plot_gaussian_clusters(self.local_precision, alpha_scale=alpha_scale, intensity_scale=0.3, min_alpha=0.05, max_res=max_res)
             elif self.radio2dPoints.isChecked():
                 if not self.analyzer.all_temporal_clusters:
@@ -641,6 +682,32 @@ class MainWindow(QMainWindow):
     def run_replicates(self):
         if self.blinking_data is None:
             self.show_popup("Missing data", "Please load a data file before running the algorithm")
+            return
+        
+        # Validate theta (labeling efficiency factor) if provided
+        theta_input = self.inputTheta.text()
+        if theta_input:
+            try:
+                theta = float(theta_input)
+                if theta <= 0 or theta > 1:
+                    self.show_popup("Invalid Input", 
+                        "Labeling efficiency factor must be greater than 0 and less than or equal to 1.")
+                    return
+            except ValueError:
+                self.show_popup("Invalid Input", 
+                    "Labeling efficiency factor must be a valid number.")
+                return
+        
+        # Validate subset size factor
+        try:
+            subset_factor = float(self.subsetSizeInput.text())
+            if subset_factor <= 0 or subset_factor > 1:
+                self.show_popup("Invalid Input", 
+                    "Subset size factor must be greater than 0 and less than or equal to 1.")
+                return
+        except ValueError:
+            self.show_popup("Invalid Input", 
+                "Subset size factor must be a valid number.")
             return
         
         m, d, t = "M", "M/D", "M/D/T"
@@ -654,6 +721,7 @@ class MainWindow(QMainWindow):
         else:
             self.show_popup("Missing algorithm", "Please select an algorithm")
             return
+            
         self.em_thread.start()
         self.progressBar.show()
         self.progressBar.setValue(0)
