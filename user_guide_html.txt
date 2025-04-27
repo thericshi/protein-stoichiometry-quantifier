@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Protein Stoichiometry Quantifier - User Guide</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        h2 {
+            color: #555;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 5px;
+        }
+
+        p {
+            margin-bottom: 10px;
+        }
+
+        ul {
+            list-style-type: square;
+            padding-left: 20px;
+        }
+
+        .section {
+            margin-bottom: 20px;
+        }
+
+        .important {
+            background-color: #ffefd5;
+            padding: 10px;
+            border-left: 5px solid #ffa500;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Protein Stoichiometry Quantifier - User Guide</h1>
+
+    <div class="section">
+        <p>
+            This user guide provides instructions on how to use the main functions of the application.
+        </p>
+    </div>
+
+    <div class="section">
+        <h2>Loading Data</h2>
+
+        <h3>Loading Localization Data</h3>
+        <p>
+            To load localization data, use the "Load Localization Data" option in the File menu.
+            The program currently only supports RapidSTORM txt files for localization data.
+        </p>
+
+        <p class="important">
+            The localization data file must be space-separated and contain at least four columns in the following format:
+        </p>
+        <ul>
+            <li>First column (x-position): float or integer</li>
+            <li>Second column (y-position): float or integer</li>
+            <li>Third column (frame number): integer</li>
+            <li>Fourth column (intensity): float or integer</li>
+        </ul>
+        <p>
+
+        </p>
+
+        <h3>Loading Blinking Data (Only if you already have this data file)</h3>
+        <p>
+            To load blinking data, use the "Load Blinking Data" option in the File menu.
+            The program supports CSV files consisting of one column. Each row in the column represents the number of blinks observed from one dye.
+            Once loaded, the file path will be displayed, and the stoichiometry tab will be enabled.
+
+    </div>
+
+    <div class="section">
+        <h2>Data Processing</h2>
+        <h3>Blink Extraction</h3>
+        <p>
+            Click the "Cluster Blinks" button to extract blinking events from the loaded localization data.
+            You may need to set the following parameters before clustering:
+        </p>
+        <ul>
+            <li>
+                <b>Intermolecular Distance (nm):</b> Specifies the maximum distance (in nanometers) between two localizations for them to be considered part of the same cluster.
+            </li>
+            <li>
+                <b>Minimum Cluster Samples:</b>  Sets the minimum number of localizations required to form a cluster. Clusters with fewer localizations will be considered noise.
+            </li>
+            <li>
+                <b>Temporal Proximity (Frames):</b> Defines the maximum number of frames separating two localizations for them to be considered temporally close.
+            </li>
+        </ul>
+        <p>
+            The extracted blinking data will be displayed in the application and saved as a CSV file in the same directory as this program.
+        </p>
+        <h3>Stoichiometry Analysis</h3>
+        <p>
+            After extracting the blinking data, you can proceed to the stoichiometry analysis tab.
+            Ensure that the blinking data is loaded correctly.
+            Select the types of protein complex to include in the prediction and set any necessary parameters:
+        </p>
+        <ul>
+            <li>
+                <b>Labelling Efficiency Factor:</b> Represents the probability that a target molecule is labelled with a fluorescent dye. If unknown, leave this value at the default (1).
+            </li>
+            <li>
+                <b>Modify Maximum Iteration Limit:</b>  Allows you to change the maximum number of iterations the EM algorithm will run. This limit prevents infinite loop in the rare case that the algorithm does not converge.
+            </li>
+            <li>
+                <b>Replicates:</b> Sets the number of times the EM algorithm is repeated. This is used to assess the variability and robustness of the results by bootstrapping.
+            </li>
+            <li>
+                <b>Subset Size Factor:</b> Determines the fraction of the data used in each replicate. Using a subset can speed up computation, especially for large datasets.
+            </li>
+        </ul>
+        <p>
+            Click "Run EM Algorithm" to start the algorithm. The results will be displayed in a table and a graph.
+        </p>
+    </div>
+
+    <div class="section">
+        <h2>Visualization</h2>
+        <p>
+            The program provides several options for visualizing the data:
+        </p>
+        <ul>
+            <li>
+                <b>Graph Dataset (in Graph Menu):</b>
+                <p>
+                    This plots the sorted blink data. It helps visualize the distribution of the number of blinks per dye, which should follow a negative binomial distribution.
+                </p>
+            </li>
+            <li>
+                <b>2D Gaussian:</b>
+                <p>
+                    This 2D graph visualizes the localization points as 2D Gaussian clusters. It provides a smoothed representation of the localization data, highlighting areas of high localization density. Different clusters are represented by different colours.
+                </p>
+            </li>
+            <li>
+                <b>2D Points:</b>
+                <p>
+                    This 2D graph displays the localization data as points of a fixed size, showing the raw spatial distribution of localizations with clusters represented by different colours.
+                </p>
+            </li>
+            <li>
+                <b>3D Original:</b>
+                <p>
+                    3D visualization of the raw localizations. x, y, z axes represent x-position, y-position and time (in frame count), respectively.
+                </p>
+            </li>
+            <li>
+                <b>3D Spatial Clusters:</b>
+                <p>
+                    3D visualization with the spatial clusters of localizations in different colours. It helps to identify where localizations are grouped together in 3D space (x, y, and time).
+                </p>
+            </li>
+            <li>
+                <b>3D Temporal Clusters:</b>
+                <p>
+                    3D visualization displays localization data with the temporal clusters in different colours.
+                </p>
+            </li>
+        </ul>
+        <p>
+            Use the graph buttons and options to select the desired visualization.
+        </p>
+    </div>
+
+    <div class="section">
+        <h2>About</h2>
+        <p>
+            The "About" section provides information about the program, its developers, and the algorithms used.
+            To access it, use the "About" option in the Help menu.
+        </p>
+    </div>
+
+    <div class="section">
+        <h2>Troubleshooting</h2>
+        <p>
+            If you encounter any issues, please ensure that the input data is correctly formatted and that all necessary parameters are set.
+            Refer to the any popup error messages for specific guidance.
+        </p>
+    </div>
+
+</body>
+
+</html>
